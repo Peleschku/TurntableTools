@@ -45,6 +45,9 @@ app = QApplication(sys.argv)
 launchWindow = turntableMainWindow()
 sys.exit(app.exec_())
 
+'''
+testing to see if changes made can be pushed via the command line xoxo
+'''
 
 
 
