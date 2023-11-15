@@ -36,6 +36,7 @@ class turntableMainWindow(QWidget):
 
         if self.filePath:
             self.assetPath.insert(self.filePath[0])
+            print('searching for file!')
 
 
 
