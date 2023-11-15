@@ -18,15 +18,29 @@ class turntableMainWindow(QWidget):
 
         self.assetLabel = QLabel("Path to Asset")
         self.assetPath = QLineEdit()
-        
+
         self.searchButton = QPushButton("Search")
         self.searchButton.clicked.connect(self.assetSearch)
+
+        self.threePoint = QPushButton("Three Point Lighting")
+        self.threePoint.clicked.connect(self.threePointSetup)
+        
+        self.skyDome = QPushButton("Sky Dome")
+        self.skyDome.clicked.connect(self.skyDomeSetup)
+
+        self.studio = QPushButton("Studio Lighting")
+        self.studio.clicked.connect(self.studioSetup)
+        
+
 
         
         
         layout.addWidget(self.assetLabel, 0, 0)
         layout.addWidget(self.assetPath, 0, 1)
         layout.addWidget(self.searchButton, 0, 2)
+        layout.addWidget(self.threePoint, 1, 0)
+        layout.addWidget(self.skyDome, 1, 1)
+        layout.addWidget(self.studio, 1, 2)
 
         self.show()
         self.setLayout(layout)
@@ -36,7 +50,6 @@ class turntableMainWindow(QWidget):
 
         if self.filePath:
             self.assetPath.insert(self.filePath[0])
-            print('searching for file!')
 
 
 
