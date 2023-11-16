@@ -40,12 +40,12 @@ class turntableMainWindow(QWidget):
 
         self.threePointTab = QWidget()
 
-        self.enableThreepoint = QCheckBox("Enable Three Point Lighting")
-        
-        self.threePoint = QPushButton("Three Point Lighting")
-        self.threePoint.clicked.connect(self.threePointSetup)
+        self.lightOneSettings = self.lightSettings('Light One')
 
-        threePointLayout.addWidget(self.threePoint, 0, 1)
+        self.enableThreepoint = QCheckBox("Enable Three Point Lighting")
+
+        threePointLayout.addWidget(self.lightOneSettings, 0, 1)
+        threePointLayout.addWidget(self.enableThreepoint, 1, 1)
         self.threePointTab.setLayout(threePointLayout)
 
         # skydome lighting setup
@@ -97,8 +97,27 @@ class turntableMainWindow(QWidget):
         if self.filePath:
             self.assetPath.insert(self.filePath[0])
     
-    def threePointSetup(self):
-        print('Three Point!')
+    def lightSettings(self, lightName):
+'''
+this isn't working properly, so need to have a go at getting this to work. it might not actaully work though -
+not really sure if i can build a while mini GUI and then just plop it into another window.
+'''
+        
+        lightsLayout = QGridLayout()
+        lightLabel = QLabel(lightName + " Settings:")
+        
+        intensityLabel =  QLabel("Intensity")
+
+        lightsLayout.addWidget(lightLabel, 0, 0)
+        lightsLayout.addWidget(intensityLabel, 1, 0)
+
+
+        
+        self.show()
+        self.setLayout(lightsLayout)
+
+        return lightLabel
+
     
     def skyDomeSetup(self):
         print('Sky Dome!')
@@ -116,9 +135,13 @@ class turntableMainWindow(QWidget):
         assetInPP = UI4.FormMaster.CreateParameterPolicy(None, assetIn.getParameter('abcAsset')).setValue(str(self.assetPath.text()))
 
 
+# when launching IN katana, make sure to get rid of this line...
+app = QApplication(sys.argv)
 
 launchWindow = turntableMainWindow()
 
+# and this line!
+sys.exit(app.exec_())
 
 '''
 testing to see if changes made can be pushed via the command line xoxo
