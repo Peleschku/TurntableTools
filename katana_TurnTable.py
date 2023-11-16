@@ -107,19 +107,18 @@ class turntableMainWindow(QWidget):
         print("Studio!")
     
     def generateTurnTable(self):
-        print("Yee Haw!")
+        
+        #creating the root node
+        root = NodegraphAPI.GetRootNode()
+        
+        #creates the alembic in containing the asset specified in the UI's file search
+        assetIn = NodegraphAPI.CreateNode('Alembic_In', root)
+        assetInPP = UI4.FormMaster.CreateParameterPolicy(None, assetIn.getParameter('abcAsset')).setValue(str(self.assetPath.text()))
 
-    
 
-    
-
-
-
-
-app = QApplication(sys.argv)
 
 launchWindow = turntableMainWindow()
-sys.exit(app.exec_())
+
 
 '''
 testing to see if changes made can be pushed via the command line xoxo
