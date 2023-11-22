@@ -40,12 +40,12 @@ class turntableMainWindow(QWidget):
 
         self.threePointTab = QWidget()
 
-        self.lightOneSettings = self.lightSettings('Light One')
+        keyLight = ThreePointSelectors(threePointLayout, 'Key Light', 0)
 
-        self.enableThreepoint = QCheckBox("Enable Three Point Lighting")
+        pointLight = ThreePointSelectors(threePointLayout, 'Point Light', 1)
 
-        threePointLayout.addWidget(self.lightOneSettings, 0, 1)
-        threePointLayout.addWidget(self.enableThreepoint, 1, 1)
+        fillLight = ThreePointSelectors(threePointLayout, 'Fill Light', 2)
+        
         self.threePointTab.setLayout(threePointLayout)
 
         # skydome lighting setup
@@ -97,27 +97,6 @@ class turntableMainWindow(QWidget):
         if self.filePath:
             self.assetPath.insert(self.filePath[0])
     
-    def lightSettings(self, lightName):
-'''
-this isn't working properly, so need to have a go at getting this to work. it might not actaully work though -
-not really sure if i can build a while mini GUI and then just plop it into another window.
-'''
-        
-        lightsLayout = QGridLayout()
-        lightLabel = QLabel(lightName + " Settings:")
-        
-        intensityLabel =  QLabel("Intensity")
-
-        lightsLayout.addWidget(lightLabel, 0, 0)
-        lightsLayout.addWidget(intensityLabel, 1, 0)
-
-
-        
-        self.show()
-        self.setLayout(lightsLayout)
-
-        return lightLabel
-
     
     def skyDomeSetup(self):
         print('Sky Dome!')
@@ -133,6 +112,45 @@ not really sure if i can build a while mini GUI and then just plop it into anoth
         #creates the alembic in containing the asset specified in the UI's file search
         assetIn = NodegraphAPI.CreateNode('Alembic_In', root)
         assetInPP = UI4.FormMaster.CreateParameterPolicy(None, assetIn.getParameter('abcAsset')).setValue(str(self.assetPath.text()))
+
+
+
+class ThreePointSelectors(QWidget):
+    def __init__(self, parentLayout, lightName, row):
+        super().__init__()
+        self.parentLayout = parentLayout
+        self.lightName = lightName
+        self.row = row
+        self.createModule()
+
+    
+    def createModule(self):
+
+        lightSettingsHead = QLabel(f"{self.lightName} Settings")
+
+        colorLabel = QLabel("Color")
+        #colorPicker = QColorDialog.getColor()
+
+        intensityLabel = QLabel("Light Intensity")        
+        inputIntensity = QLineEdit()
+
+        exposureLabel = QLabel("Light Exposure")
+        inputExposure = QLineEdit()
+
+        #number of rows in the layout 
+        numberOfRows = 3
+        
+        self.parentLayout.addWidget(lightSettingsHead, self.row*numberOfRows+0, 0)
+        self.parentLayout.addWidget(colorLabel, self.row*numberOfRows+1, 0)
+        #self.parentLayout.addWidget(colorPicker, self.row*numberOfRows+2, 0)
+        self.parentLayout.addWidget(intensityLabel, self.row*numberOfRows+1, 1)
+        self.parentLayout.addWidget(inputIntensity, self.row*numberOfRows+2, 1)
+        self.parentLayout.addWidget(exposureLabel, self.row*numberOfRows+1, 2)
+        self.parentLayout.addWidget(inputExposure, self.row*numberOfRows+2, 2)
+        
+
+
+
 
 
 # when launching IN katana, make sure to get rid of this line...
