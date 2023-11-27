@@ -22,8 +22,7 @@ class turntableMainWindow(QWidget):
 
         layout = QGridLayout()
         threePointLayout = QGridLayout()
-        skyDomeLayout = QVBoxLayout()
-        studioLayout = QGridLayout()
+        skyDomeLayout = QGridLayout()
 
         self.assetLabel = QLabel("Path to Asset")
         self.assetPath = QLineEdit()
@@ -52,28 +51,14 @@ class turntableMainWindow(QWidget):
         
         self.skyDomeTab = QWidget()
 
-        self.skyDome = QPushButton("Sky Dome")
-        self.skyDome.clicked.connect(self.skyDomeSetup)
+        skydomeSetup = HDRISetup(skyDomeLayout)
 
-        skyDomeLayout.addWidget(self.skyDome)
         self.skyDomeTab.setLayout(skyDomeLayout)
-
-        # studio lighting setup
-
-        self.studioLightingTab = QWidget()
-        
-        self.studio = QPushButton("Studio Lighting")
-        self.studio.clicked.connect(self.studioSetup)
-
-        studioLayout.addWidget(self.studio, 0, 1)
-
-        self.studioLightingTab.setLayout(studioLayout)
 
         # adding the tabs to the overall tab widget
 
         self.lightingTabs.addTab(self.threePointTab, "Three Point Setup")
-        self.lightingTabs.addTab(self.skyDomeTab, "Sky Dome Setup")
-        self.lightingTabs.addTab(self.studioLightingTab, "Studio Lighting Setup")
+        self.lightingTabs.addTab(self.skyDomeTab, "HDRI Lighting Setup")
 
         self.createScene = QPushButton("Create Turntable Scene!")
         self.createScene.clicked.connect(self.generateTurnTable)
@@ -121,6 +106,7 @@ class ThreePointSelectors(QWidget):
         self.parentLayout = parentLayout
         self.lightName = lightName
         self.row = row
+        #self.parent = turntableMainWindow
         self.createModule()
 
     
@@ -129,10 +115,13 @@ class ThreePointSelectors(QWidget):
         lightSettingsHead = QLabel(f"{self.lightName} Settings")
 
         colorLabel = QLabel("Color")
-        #colorPicker = QColorDialog.getColor()
+        colorPicker = UI4.Widgets.ColorProbeButton(self)
+        
 
         intensityLabel = QLabel("Light Intensity")        
         inputIntensity = QLineEdit()
+        inputSlider = UI4.FormMaster.Editors.UserParametersDialogs.QtWidgets.QSlider()
+        #inputIntensity.addItem(int(inputSlider))
 
         exposureLabel = QLabel("Light Exposure")
         inputExposure = QLineEdit()
@@ -142,12 +131,50 @@ class ThreePointSelectors(QWidget):
         
         self.parentLayout.addWidget(lightSettingsHead, self.row*numberOfRows+0, 0)
         self.parentLayout.addWidget(colorLabel, self.row*numberOfRows+1, 0)
-        #self.parentLayout.addWidget(colorPicker, self.row*numberOfRows+2, 0)
+        self.parentLayout.addWidget(colorPicker, self.row*numberOfRows+2, 0)
         self.parentLayout.addWidget(intensityLabel, self.row*numberOfRows+1, 1)
         self.parentLayout.addWidget(inputIntensity, self.row*numberOfRows+2, 1)
         self.parentLayout.addWidget(exposureLabel, self.row*numberOfRows+1, 2)
         self.parentLayout.addWidget(inputExposure, self.row*numberOfRows+2, 2)
         
+class HDRISetup(QWidget):
+    def __init__(self, parentLayout):
+        super().__init__()
+        self.parentLayout = parentLayout
+        self.createModule()
+    
+    def createModule(self):
+        lightSettingsHead = QLabel("HDRI Settings")
+        lightSettingsHead.setAlignment(Qt.AlignCenter)
+        
+        mappingParams = ["Spherical (latlong)",
+                         "Angular"]
+        
+        nameLabel = QLabel("HDRI Path")
+        self.hdriPath = QLineEdit()
+        self.hdriSearch = QPushButton("Search for Texture")
+        self.hdriSearch.clicked.connect(self.setHDRIPath)
+
+        colorspaceLabel = QLabel("Set Color Space")
+        selectColorspace = UI4.Widgets.ColorspaceSelectionWidget(self)
+
+        mappingLabel = QLabel("Set Mapping Type")
+
+        self.parentLayout.addWidget(lightSettingsHead, 0, 0 )
+        self.parentLayout.addWidget(nameLabel, 1, 0)
+        self.parentLayout.addWidget(self.hdriPath, 2, 0, 1, 3)
+        self.parentLayout.addWidget(self.hdriSearch, 2, 3)
+        self.parentLayout.addWidget(colorspaceLabel, 3, 0)
+        self.parentLayout.addWidget(selectColorspace, 4, 0, 1, 4)
+        self.parentLayout.addWidget(mappingLabel, 5, 0)
+        #self.parentLayout.addWidget(mappingParams, 6, 0)
+    
+    def setHDRIPath(self):
+        self.filePath = QFileDialog.getOpenFileName(self, "Select Asset")
+
+        if self.filePath:
+            self.hdriPath.insert(self.filePath[0])
+
 
 
 
