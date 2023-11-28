@@ -74,11 +74,10 @@ class turntableMainWindow(QWidget):
         layout.addWidget(self.assetLabel, 0, 0)
         layout.addWidget(self.assetPath, 0, 1)
         layout.addWidget(self.searchButton, 0, 4)
-        layout.addWidget(spacer, 1, 0)
-        layout.addWidget(self.lightingTabs, 2, 0, 1, 5)
-        layout.addWidget(self.cameraSettings, 3, 0, 1, 5)
-        layout.addWidget(self.lookdevSettings, 4, 0, 1, 5)
-        layout.addWidget(self.createScene, 5, 0, 1, 5)
+        layout.addWidget(self.lightingTabs, 1, 0, 1, 5)
+        layout.addWidget(self.cameraSettings, 2, 0, 1, 5)
+        layout.addWidget(self.lookdevSettings, 3, 0, 1, 5)
+        layout.addWidget(self.createScene, 4, 0, 1, 5)
 
         self.show()
         self.setLayout(layout)
@@ -194,7 +193,7 @@ class CameraSettings(QWidget):
         camFOVLabel = QLabel('FOV Amount')
         self.FOVValue = QLineEdit()
         
-        makeCamInteractiveLabel = QLabel("Make Camera Interactive?")
+        makeCamInteractiveLabel = QLabel("Disable Make Camera Interactive?")
         self.makeCamInteractive = QCheckBox()
         
         camResolution = QLabel("Resolution")
@@ -211,6 +210,25 @@ class CameraSettings(QWidget):
         
         self.show()
         self.setLayout(self.parentLayout)
+    
+    def cameraCreate(self, rootNode):
+        mainCam = NodegraphAPI.CreateNode('CameraCreate', rootNode)
+        cameraFOV = UI4.FormMaster.CreateParameterPolicy(None, mainCam.getParameter('fov'))
+        makeInteractive = UI4.FormMaster.CreateParameterPolicy(None, mainCam.getParameter('makeInteractive'))
+        
+        cameraFOV.setValue(int(self.FOVValue.text()))
+
+        if self.makeCamInteractive.setCheckable(False):
+            makeInteractive.setValue('No')
+        else:
+            makeInteractive.setValue('Yes')
+    
+    def renderSettings(self, rootNode):
+        renderSettings = NodegraphAPI.CreateNode('RenderSettings', root)
+
+        resolutionChange = UI4.FormMaster.CreateParameterPolicy(None, renderSettings.getParameter('args.renderSettings.resolution'))
+        resolutionChange.setValue(str(self.camResDropdown.currentText()))
+
 
 class LookdevSettings(QWidget):
     def __init__(self):
@@ -232,5 +250,6 @@ class LookdevSettings(QWidget):
         
         self.show()
         self.setLayout(self.parentLayout)
+        
 
 launchWindow = turntableMainWindow()
