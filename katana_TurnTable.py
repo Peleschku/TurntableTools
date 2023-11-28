@@ -60,18 +60,25 @@ class turntableMainWindow(QWidget):
         self.lightingTabs.addTab(self.threePointTab, "Three Point Setup")
         self.lightingTabs.addTab(self.skyDomeTab, "HDRI Lighting Setup")
 
+        # camera settings widget
+
+        self.cameraSettings = CameraSettings()
+        
+        # lookdev scene create
+        self.lookdevSettings = LookdevSettings()
+
         self.createScene = QPushButton("Create Turntable Scene!")
         self.createScene.clicked.connect(self.generateTurnTable)
-        
 
-
-        
-        
+ 
         layout.addWidget(self.assetLabel, 0, 0)
-        layout.addWidget(self.assetPath, 0, 1, 1, 3)
+        layout.addWidget(self.assetPath, 0, 1)
         layout.addWidget(self.searchButton, 0, 4)
-        layout.addWidget(self.lightingTabs, 1, 0, 1, 5)
-        layout.addWidget(self.createScene, 2, 3)
+        layout.addWidget(spacer, 1, 0)
+        layout.addWidget(self.lightingTabs, 2, 0, 1, 5)
+        layout.addWidget(self.cameraSettings, 3, 0, 1, 5)
+        layout.addWidget(self.lookdevSettings, 4, 0, 1, 5)
+        layout.addWidget(self.createScene, 5, 0, 1, 5)
 
         self.show()
         self.setLayout(layout)
@@ -115,7 +122,7 @@ class ThreePointSelectors(QWidget):
         lightSettingsHead = QLabel(f"{self.lightName} Settings")
 
         colorLabel = QLabel("Color")
-        colorPicker = UI4.Widgets.ColorProbeButton(self)
+        #colorPicker = UI4.FormMaster.Editors.KatanaColor.KatanaColorFormWidget()
         
 
         intensityLabel = QLabel("Light Intensity")        
@@ -131,7 +138,7 @@ class ThreePointSelectors(QWidget):
         
         self.parentLayout.addWidget(lightSettingsHead, self.row*numberOfRows+0, 0)
         self.parentLayout.addWidget(colorLabel, self.row*numberOfRows+1, 0)
-        self.parentLayout.addWidget(colorPicker, self.row*numberOfRows+2, 0)
+        #self.parentLayout.addWidget(colorPicker, self.row*numberOfRows+2, 0)
         self.parentLayout.addWidget(intensityLabel, self.row*numberOfRows+1, 1)
         self.parentLayout.addWidget(inputIntensity, self.row*numberOfRows+2, 1)
         self.parentLayout.addWidget(exposureLabel, self.row*numberOfRows+1, 2)
@@ -166,7 +173,7 @@ class HDRISetup(QWidget):
         self.parentLayout.addWidget(self.hdriSearch, 2, 3)
         self.parentLayout.addWidget(colorspaceLabel, 3, 0)
         self.parentLayout.addWidget(selectColorspace, 4, 0, 1, 4)
-        self.parentLayout.addWidget(mappingLabel, 5, 0)
+        self.parentLayout.addWidget(mappingLabel, 6, 0)
         #self.parentLayout.addWidget(mappingParams, 6, 0)
     
     def setHDRIPath(self):
@@ -175,22 +182,55 @@ class HDRISetup(QWidget):
         if self.filePath:
             self.hdriPath.insert(self.filePath[0])
 
+class CameraSettings(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.parentLayout = QGridLayout()
+        self.createModule()
+    
+    def createModule(self):
+        
+        cameraSettingsHeader = QLabel("Camera Settings")
+        camFOVLabel = QLabel('FOV Amount')
+        self.FOVValue = QLineEdit()
+        
+        makeCamInteractiveLabel = QLabel("Make Camera Interactive?")
+        self.makeCamInteractive = QCheckBox()
+        
+        camResolution = QLabel("Resolution")
+        self.camResDropdown = UI4.Widgets.ResolutionComboBox(self)
 
 
+        self.parentLayout.addWidget(cameraSettingsHeader, 0, 0)
+        self.parentLayout.addWidget(camFOVLabel, 1, 0)
+        self.parentLayout.addWidget(self.FOVValue, 1, 1)
+        self.parentLayout.addWidget(makeCamInteractiveLabel, 1, 2)
+        self.parentLayout.addWidget(self.makeCamInteractive, 1, 3)
+        self.parentLayout.addWidget(camResolution, 2, 0)
+        self.parentLayout.addWidget(self.camResDropdown, 2, 1, 2, 3)
+        
+        self.show()
+        self.setLayout(self.parentLayout)
 
+class LookdevSettings(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.parentLayout = QGridLayout()
+        self.createModule()
+    
+    def createModule(self):
+        
+        lookdevHeader = QLabel("Look Dev Scene Settings")
+        self.enableBackdrop = QCheckBox("Enable Backdrop")
+        self.enableMacbethChart = QCheckBox("Enable Macbeth Chart")
+        self.enableShaderBalls = QCheckBox("Enable Shader Balls")
 
-
-# when launching IN katana, make sure to get rid of this line...
-app = QApplication(sys.argv)
+        self.parentLayout.addWidget(lookdevHeader, 0, 0)
+        self.parentLayout.addWidget(self.enableBackdrop, 1, 0)
+        self.parentLayout.addWidget(self.enableMacbethChart, 1, 1)
+        self.parentLayout.addWidget(self.enableShaderBalls, 1, 2)
+        
+        self.show()
+        self.setLayout(self.parentLayout)
 
 launchWindow = turntableMainWindow()
-
-# and this line!
-sys.exit(app.exec_())
-
-'''
-testing to see if changes made can be pushed via the command line xoxo
-'''
-
-
-
