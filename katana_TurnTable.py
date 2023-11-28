@@ -64,11 +64,16 @@ class turntableMainWindow(QWidget):
 
         self.cameraSettings = CameraSettings()
         
-        # lookdev scene create
+        # lookdev settings widget
         self.lookdevSettings = LookdevSettings()
 
+        # turntable create
         self.createScene = QPushButton("Create Turntable Scene!")
         self.createScene.clicked.connect(self.generateTurnTable)
+
+        #turntable edit
+        self.updateSceneButton = QPushButton("Update Turntable Scene")
+        self.updateSceneButton.clicked.connect(self.updateScene)
 
  
         layout.addWidget(self.assetLabel, 0, 0)
@@ -77,7 +82,8 @@ class turntableMainWindow(QWidget):
         layout.addWidget(self.lightingTabs, 1, 0, 1, 5)
         layout.addWidget(self.cameraSettings, 2, 0, 1, 5)
         layout.addWidget(self.lookdevSettings, 3, 0, 1, 5)
-        layout.addWidget(self.createScene, 4, 0, 1, 5)
+        layout.addWidget(self.createScene, 4, 0, 1, 2)
+        layout.addWidget(self.updateSceneButton, 4, 3, 4, 5)
 
         self.show()
         self.setLayout(layout)
@@ -101,8 +107,16 @@ class turntableMainWindow(QWidget):
         root = NodegraphAPI.GetRootNode()
         
         #creates the alembic in containing the asset specified in the UI's file search
-        assetIn = NodegraphAPI.CreateNode('Alembic_In', root)
-        assetInPP = UI4.FormMaster.CreateParameterPolicy(None, assetIn.getParameter('abcAsset')).setValue(str(self.assetPath.text()))
+        self.assetIn = NodegraphAPI.CreateNode('Alembic_In', root)
+        self.assetInPP = UI4.FormMaster.CreateParameterPolicy(None, self.assetIn.getParameter('abcAsset')).setValue(str(self.assetPath.text()))
+
+        return self.assetIn
+        
+    def updateScene(self):
+        self.assetInPP = UI4.FormMaster.CreateParameterPolicy(None, self.assetIn.getParameter('abcAsset')).setValue(str(self.assetPath.text()))
+
+        return self.assetIn
+
 
 
 
