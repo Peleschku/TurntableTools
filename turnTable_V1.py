@@ -47,9 +47,9 @@ class TurntableWindow(QWidget):
         self.createTurnTable.clicked.connect(self.generateTT)
 
         layout.addWidget(assetLabel, 0, 0)
-        layout.addWidget(self.assetPath, 0, 1, 1, 4)
-        layout.addWidget(self.searchButton, 0, 5)
-        layout.addWidget(self.cameraSetup, 1, 0)
+        layout.addWidget(self.assetPath, 0, 1, 1, 3)
+        layout.addWidget(self.searchButton, 0, 4)
+        layout.addWidget(self.cameraSetup, 1, 0, 1, 5)
         layout.addWidget(self.skydomeSetup, 2, 0, 1, 5)       
         layout.addWidget(self.createTurnTable, 3, 0, 1, 5)
 
@@ -108,9 +108,14 @@ class TurntableWindow(QWidget):
 
         assetLocation = alembicCreate.getParameterValue('name', NodegraphAPI.GetCurrentTime())
 
-        camera = CameraSettings.cameraCreate(self)
+        camera = NodegraphAPI.CreateNode('CameraCreate', self.root)
+        
+        
         cameraFOV = UI4.FormMaster.CreateParameterPolicy(None, camera.getParameter('fov'))
-        cameraFOV.setValue(int(self.cameraSetup.FOVValue.text()))
+        if self.cameraSetup.FOVValue.text() != "70":
+            cameraFOV.setValue(int(self.cameraSetup.FOVValue.text()))
+
+
         makeInteractive = UI4.FormMaster.CreateParameterPolicy(None, camera.getParameter('makeInteractive'))
 
         if self.cameraSetup.makeCamInteractive.setCheckable(False):
@@ -134,7 +139,7 @@ class TurntableWindow(QWidget):
         # creates render settings node and assigns the camera resolution
         # based on the selection in the UI's dropdown
 
-        renderSettings = CameraSettings.renderSettings(self)
+        renderSettings = NodegraphAPI.CreateNode('RenderSettings', self.root)
 
         camResolution = UI4.FormMaster.CreateParameterPolicy(None, renderSettings.getParameter('args.renderSettings.resolution'))
         camResolution.setValue(str(self.cameraSetup.camResDropdown.currentText()))
@@ -231,12 +236,14 @@ class CameraSettings(QWidget):
         cameraSettingsHeader = QLabel("Camera Settings")
         camFOVLabel = QLabel('FOV Amount')
         self.FOVValue = QLineEdit()
+        self.FOVValue.setText("70")
         
         makeCamInteractiveLabel = QLabel("Disable Make Camera Interactive?")
         self.makeCamInteractive = QCheckBox()
         
         camResolution = QLabel("Resolution")
         self.camResDropdown = UI4.Widgets.ResolutionComboBox(self)
+        
 
         adjustmentTypes = ['No adjustment',
                            'Adjust height to match resolution',
@@ -254,36 +261,13 @@ class CameraSettings(QWidget):
         self.parentLayout.addWidget(makeCamInteractiveLabel, 1, 2)
         self.parentLayout.addWidget(self.makeCamInteractive, 1, 3)
         self.parentLayout.addWidget(camResolution, 2, 0)
-        self.parentLayout.addWidget(self.camResDropdown, 2, 1, 2, 3)
+        self.parentLayout.addWidget(self.camResDropdown, 2, 1, 1, 3)
         self.parentLayout.addWidget(screenWindow, 3, 0)
-        self.parentLayout.addWidget(self.screenDropDown, 3, 1, 2, 3)
+        self.parentLayout.addWidget(self.screenDropDown, 3, 1, 1, 3)
         
         self.show()
         self.setLayout(self.parentLayout)
     
-    def cameraCreate(self):
-        mainCam = NodegraphAPI.CreateNode('CameraCreate', self.root)
-        '''
-        cameraFOV = UI4.FormMaster.CreateParameterPolicy(None, mainCam.getParameter('fov'))
-        makeInteractive = UI4.FormMaster.CreateParameterPolicy(None, mainCam.getParameter('makeInteractive'))
-        
-        cameraFOV.setValue(int(self.FOVValue.text()))
-
-        if self.makeCamInteractive.setCheckable(False):
-            makeInteractive.setValue('No')
-        else:
-            makeInteractive.setValue('Yes')
-        '''
-        return mainCam
-    
-    def renderSettings(self):
-        renderSettings = NodegraphAPI.CreateNode('RenderSettings', self.root)
-        '''
-        resolutionChange = UI4.FormMaster.CreateParameterPolicy(None, renderSettings.getParameter('args.renderSettings.resolution'))
-        resolutionChange.setValue(str(self.camResDropdown.currentText()))
-        '''
-        
-        return renderSettings
 
 
 turnTable = TurntableWindow()
