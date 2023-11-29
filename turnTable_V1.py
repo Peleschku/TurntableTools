@@ -88,35 +88,59 @@ class TurntableWindow(QWidget):
         
         return mergeNode
     
+    def dollyConstraintCreate(self, cameraPath, assetPath, offsetAmount):
+        dollyConstraint = NodegraphAPI.CreateNode('DollyConstraint', self.root)
+
+        dollyBasePath = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('basePath'))
+        dollyBasePath.setValue(cameraPath)
+        
+        dollyTargetPath = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('targetPath.i0'))
+        dollyTargetPath.setValue(assetPath)
+
+        dollyTargetBounds = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('targetBounds'))
+        dollyTargetBounds.setValue('sphere')
+
+        dollyOffsetAngle = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('angleOffset'))
+        dollyOffsetAngle.setValue(offsetAmount)
+
+        return dollyConstraint
+
+    
     def generateTT(self):
 
         alembicCreate = NodegraphAPI.CreateNode('Alembic_In', self.root)
         assetSet = UI4.FormMaster.CreateParameterPolicy(None, alembicCreate.getParameter('abcAsset'))
         assetSet.setValue(str(self.assetPath.text()))
 
+        assetLocation = alembicCreate.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+
         if self.createCamera.isChecked():
             camera = NodegraphAPI.CreateNode('CameraCreate', self.root)
         
-        camTranslate = UI4.FormMaster.CreateParameterPolicy(None, camera.getParameter('transform.translate'))
-        camTranslate.setValue([0.0,
-                               0.6,
-                               1.6], 1)
-        
+        camLocation = camera.getParameterValue('name', NodegraphAPI.GetCurrentTime())
 
         camAssetMerge = self.multiMerge([alembicCreate, camera])
         camMergeOut = camAssetMerge.getOutputPort('out')
 
+        # creates the dolly constraint that snaps the camera to the Asset
+
+        dollyConstraint = self.dollyConstraintCreate(camLocation, assetLocation, -30)
+        dollyInputPort = dollyConstraint.getInputPort('input')
+        dollyOutputPort = dollyConstraint.getOutputPort('out')
+
+        camMergeOut.connect(dollyInputPort)
+
         # if the 'use skydome' check box is checked, create a skydome
         # note to self: the line in the if statement is calling a function
         # from within the SkydomeSetup class
-        
+
         if self.skydomeSetup.useSkydome.isChecked():
             skydome = SkydomeSetup.createSkydome(self)
 
         skydomeInput = skydome.getInputPort('in')
         skydomeOutput = skydome.getOutputPort('out')
 
-        camMergeOut.connect(skydomeInput)
+        skydomeInput.connect(dollyOutputPort)
 
         # creates render settings node and assigns the camera resolution
         # based on the selection in the UI's dropdown
@@ -127,6 +151,9 @@ class TurntableWindow(QWidget):
 
         renderInput = renderSettings.getInputPort('input')
         skydomeOutput.connect(renderInput)
+
+        allNodes = NodegraphAPI.GetAllNodes()
+        NodegraphAPI.ArrangeNodes(allNodes, nodeGraphLengthSpacing = 250, nodeGraphWidthSpacing = 100)
 
 class SkydomeSetup(QWidget):
     def __init__(self):
