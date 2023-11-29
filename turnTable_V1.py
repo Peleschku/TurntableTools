@@ -34,10 +34,7 @@ class TurntableWindow(QWidget):
 
         # create camera is checkbox is checked
 
-        cameraHeader = QLabel("Camera Settings")
-        self.createCamera = QCheckBox("Create Camera?")
-        updateCamRes = QLabel("Resolution")
-        self.cameraResSelect = UI4.Widgets.ResolutionComboBox(self)
+        self.cameraSetup = CameraSettings()
 
         # HDRI setup
 
@@ -52,12 +49,9 @@ class TurntableWindow(QWidget):
         layout.addWidget(assetLabel, 0, 0)
         layout.addWidget(self.assetPath, 0, 1, 1, 4)
         layout.addWidget(self.searchButton, 0, 5)
-        layout.addWidget(cameraHeader, 1, 0)
-        layout.addWidget(self.createCamera, 2, 0)
-        layout.addWidget(updateCamRes, 3, 0)
-        layout.addWidget(self.cameraResSelect, 3, 1, 1, 4)
-        layout.addWidget(self.skydomeSetup, 4, 0, 1, 5)       
-        layout.addWidget(self.createTurnTable, 5, 0, 1, 5)
+        layout.addWidget(self.cameraSetup, 1, 0)
+        layout.addWidget(self.skydomeSetup, 2, 0, 1, 5)       
+        layout.addWidget(self.createTurnTable, 3, 0, 1, 5)
 
         self.show()
         self.setLayout(layout)
@@ -114,8 +108,15 @@ class TurntableWindow(QWidget):
 
         assetLocation = alembicCreate.getParameterValue('name', NodegraphAPI.GetCurrentTime())
 
-        if self.createCamera.isChecked():
-            camera = NodegraphAPI.CreateNode('CameraCreate', self.root)
+        camera = CameraSettings.cameraCreate(self)
+        cameraFOV = UI4.FormMaster.CreateParameterPolicy(None, camera.getParameter('fov'))
+        cameraFOV.setValue(int(self.cameraSetup.FOVValue.text()))
+        makeInteractive = UI4.FormMaster.CreateParameterPolicy(None, camera.getParameter('makeInteractive'))
+
+        if self.cameraSetup.makeCamInteractive.setCheckable(False):
+            makeInteractive.setValue('No')
+        else:
+            makeInteractive.setValue('Yes')
         
         camLocation = camera.getParameterValue('name', NodegraphAPI.GetCurrentTime())
 
@@ -130,27 +131,39 @@ class TurntableWindow(QWidget):
 
         camMergeOut.connect(dollyInputPort)
 
+        # creates render settings node and assigns the camera resolution
+        # based on the selection in the UI's dropdown
+
+        renderSettings = CameraSettings.renderSettings(self)
+
+        camResolution = UI4.FormMaster.CreateParameterPolicy(None, renderSettings.getParameter('args.renderSettings.resolution'))
+        camResolution.setValue(str(self.cameraSetup.camResDropdown.currentText()))
+
+        screenAdjustment = UI4.FormMaster.CreateParameterPolicy(None, renderSettings.getParameter('args.renderSettings.adjustScreenWindow'))
+        screenAdjustment.setValue(str(self.cameraSetup.screenDropDown.currentText()))
+
+        renderInput = renderSettings.getInputPort('input')
+
+        
         # if the 'use skydome' check box is checked, create a skydome
         # note to self: the line in the if statement is calling a function
         # from within the SkydomeSetup class
 
         if self.skydomeSetup.useSkydome.isChecked():
             skydome = SkydomeSetup.createSkydome(self)
+            
+            # hooking the skydome up to the dolly constraint above it
+            # and the render settings below it
 
-        skydomeInput = skydome.getInputPort('in')
-        skydomeOutput = skydome.getOutputPort('out')
+            skydomeInput = skydome.getInputPort('in')
+            skydomeOutput = skydome.getOutputPort('out')
+            skydomeInput.connect(dollyOutputPort)
+            skydomeOutput.connect(renderInput)
 
-        skydomeInput.connect(dollyOutputPort)
+        else:
+            # if the checkbox is not checked, 
+            dollyOutputPort.connect(renderInput)
 
-        # creates render settings node and assigns the camera resolution
-        # based on the selection in the UI's dropdown
-
-        renderSettings = NodegraphAPI.CreateNode('RenderSettings', self.root)
-        resolution = UI4.FormMaster.CreateParameterPolicy(None, renderSettings.getParameter('args.renderSettings.resolution'))
-        resolution.setValue(str(self.cameraResSelect.currentText()))
-
-        renderInput = renderSettings.getInputPort('input')
-        skydomeOutput.connect(renderInput)
 
         allNodes = NodegraphAPI.GetAllNodes()
         NodegraphAPI.ArrangeNodes(allNodes, nodeGraphLengthSpacing = 250, nodeGraphWidthSpacing = 100)
@@ -207,7 +220,70 @@ class SkydomeSetup(QWidget):
         if self.filePath:
             self.texturePath.insert(self.filePath[0])
 
+class CameraSettings(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.parentLayout = QGridLayout()
+        self.createModule()
+    
+    def createModule(self):
+        
+        cameraSettingsHeader = QLabel("Camera Settings")
+        camFOVLabel = QLabel('FOV Amount')
+        self.FOVValue = QLineEdit()
+        
+        makeCamInteractiveLabel = QLabel("Disable Make Camera Interactive?")
+        self.makeCamInteractive = QCheckBox()
+        
+        camResolution = QLabel("Resolution")
+        self.camResDropdown = UI4.Widgets.ResolutionComboBox(self)
 
+        adjustmentTypes = ['No adjustment',
+                           'Adjust height to match resolution',
+                           'Adjust width to match resolution']
+        
+        screenWindow = QLabel("Adjust Screen Window")
+        self.screenDropDown = UI4.Widgets.QtWidgets.QComboBox()
+        self.screenDropDown.addItems(adjustmentTypes)
+
+
+
+        self.parentLayout.addWidget(cameraSettingsHeader, 0, 0)
+        self.parentLayout.addWidget(camFOVLabel, 1, 0)
+        self.parentLayout.addWidget(self.FOVValue, 1, 1)
+        self.parentLayout.addWidget(makeCamInteractiveLabel, 1, 2)
+        self.parentLayout.addWidget(self.makeCamInteractive, 1, 3)
+        self.parentLayout.addWidget(camResolution, 2, 0)
+        self.parentLayout.addWidget(self.camResDropdown, 2, 1, 2, 3)
+        self.parentLayout.addWidget(screenWindow, 3, 0)
+        self.parentLayout.addWidget(self.screenDropDown, 3, 1, 2, 3)
+        
+        self.show()
+        self.setLayout(self.parentLayout)
+    
+    def cameraCreate(self):
+        mainCam = NodegraphAPI.CreateNode('CameraCreate', self.root)
+        '''
+        cameraFOV = UI4.FormMaster.CreateParameterPolicy(None, mainCam.getParameter('fov'))
+        makeInteractive = UI4.FormMaster.CreateParameterPolicy(None, mainCam.getParameter('makeInteractive'))
+        
+        cameraFOV.setValue(int(self.FOVValue.text()))
+
+        if self.makeCamInteractive.setCheckable(False):
+            makeInteractive.setValue('No')
+        else:
+            makeInteractive.setValue('Yes')
+        '''
+        return mainCam
+    
+    def renderSettings(self):
+        renderSettings = NodegraphAPI.CreateNode('RenderSettings', self.root)
+        '''
+        resolutionChange = UI4.FormMaster.CreateParameterPolicy(None, renderSettings.getParameter('args.renderSettings.resolution'))
+        resolutionChange.setValue(str(self.camResDropdown.currentText()))
+        '''
+        
+        return renderSettings
 
 
 turnTable = TurntableWindow()
