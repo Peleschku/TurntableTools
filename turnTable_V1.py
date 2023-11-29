@@ -22,6 +22,11 @@ class TurntableWindow(QWidget):
     def populateUI(self):
 
         layout = QGridLayout()
+        skydomeLayout = QGridLayout()
+        skydomeLayout.setVerticalSpacing(10)
+
+        threePointLayout = QGridLayout()
+        threePointLayout.setVerticalSpacing(10)
 
         assetLabel = QLabel("Path to Asset")
         self.assetPath = QLineEdit()
@@ -31,14 +36,33 @@ class TurntableWindow(QWidget):
 
         self.searchButton = QPushButton("Search")
         self.searchButton.clicked.connect(self.assetBrowser)
+        
+        # creating the lighting tabs
+        self.lightingTabs = QTabWidget()
+        
+        # Skydome Tab
+        self.skyDomeTab = QWidget()
+        
+        self.skydomeSetup = SkydomeSetup(skydomeLayout)
+        
+        self.skyDomeTab.setLayout(skydomeLayout)
 
-        # create camera is checkbox is checked
+        # three point lighting tab
 
-        self.cameraSetup = CameraSettings()
+        self.threePointTab = QWidget()
+        test = QLabel("hello!")
+        threePointLayout.addWidget(test, 0, 0)
+        self.threePointTab.setLayout(threePointLayout)
 
-        # HDRI setup
 
-        self.skydomeSetup = SkydomeSetup()
+        # adding tabs to tab widget
+
+        self.lightingTabs.addTab(self.skyDomeTab, "Environment Lighting Setup")
+        self.lightingTabs.addTab(self.threePointTab, "Three Point Lighting")
+        
+        # adding camera layout
+
+        self.cameraSetup = CameraSettings() 
 
         
         # button that assembles the turn table when clicked
@@ -49,8 +73,8 @@ class TurntableWindow(QWidget):
         layout.addWidget(assetLabel, 0, 0)
         layout.addWidget(self.assetPath, 0, 1, 1, 3)
         layout.addWidget(self.searchButton, 0, 4)
-        layout.addWidget(self.cameraSetup, 1, 0, 1, 5)
-        layout.addWidget(self.skydomeSetup, 2, 0, 1, 5)       
+        layout.addWidget(self.lightingTabs, 1, 0, 1, 5)
+        layout.addWidget(self.cameraSetup, 2, 0, 1, 5)      
         layout.addWidget(self.createTurnTable, 3, 0, 1, 5)
 
         self.show()
@@ -169,36 +193,89 @@ class TurntableWindow(QWidget):
             # if the checkbox is not checked, 
             dollyOutputPort.connect(renderInput)
 
+        # if the use texture checkbox in the Skydome tab is checked:
+        if self.skydomeSetup.useTexture.isChecked():
+            lightMat = SkydomeSetup.envLightMaterial(skydome)
+
+            texturePath = UI4.FormMaster.CreateParameterPolicy(None, lightMat.getParameter('shaders.dlEnvironmentParams.image'))
+            texturePath.setValue(str(self.skydomeSetup.texturePath.text()))
+
+            colorSpace = UI4.FormMaster.CreateParameterPolicy(None, lightMat.getParameter('shaders.dlEnvironmentParams.image_meta_colorspace'))
+            colorSpace.setValue(str(self.skydomeSetup.selectColorspace.currentText()))
+        
+        
+        # if there are values in the intensity/exposure boxes, do the following:
+
+        intensity = UI4.FormMaster.CreateParameterPolicy(None, lightMat.getParameter('shaders.dlEnvironmentParams.intensity'))
+        exposure = UI4.FormMaster.CreateParameterPolicy(None, lightMat.getParameter('shaders.dlEnvironmentParams.exposure'))
+        
+        if self.skydomeSetup.intensityValue.text() != "0":
+            intensity.setValue(int(self.skydomeSetup.intensityValue.text()))
+        
+        if self.skydomeSetup.exposureValue.text() != "0":
+            exposure.setValue(int(self.skydomeSetup.intensityValue.text()))
+             
+
+
 
         allNodes = NodegraphAPI.GetAllNodes()
         NodegraphAPI.ArrangeNodes(allNodes, nodeGraphLengthSpacing = 250, nodeGraphWidthSpacing = 100)
 
 class SkydomeSetup(QWidget):
-    def __init__(self):
+    def __init__(self, parentLayout):
         super().__init__()
-        self.parentLayout = QGridLayout()
+        self.parentLayout = parentLayout
         self.root = NodegraphAPI.GetRootNode()
         self.createModule()
     
     def createModule(self):
-        skydomeHeader = QLabel("Skydome Setup")
-        useTexture = QCheckBox("Use HDRI Texture?")
+
+        # path to texture
 
         texturePathLabel = QLabel("Path to Texture")
         self.texturePath = QLineEdit()
         self.searchTexture = QPushButton("Search")
         self.searchTexture.clicked.connect(self.textureBrowser)
 
+        colorSpaceList = ['auto',
+                          'sRGB',
+                          'Rec. 709',
+                          'linear']
+        colorSpace = QLabel("Set Colorspace")
+        self.selectColorspace = UI4.Widgets.QtWidgets.QComboBox()
+        self.selectColorspace.addItems(colorSpaceList)
 
-       
+        mappingParams = ["Spherical (latlong)",
+                        "Angular"]
+        
+        mapping = QLabel("Set Mapping Type")
+        self.mappingDrowdown = UI4.Widgets.QtWidgets.QComboBox()
+        self.mappingDrowdown.addItems(mappingParams)
+
+        self.useTexture = QCheckBox("Use HDRI Texture?")
         self.useSkydome = QCheckBox("Use Skydome Setup")
 
-        self.parentLayout.addWidget(skydomeHeader, 0, 0)
-        self.parentLayout.addWidget(useTexture, 1, 0)
-        self.parentLayout.addWidget(texturePathLabel, 2, 0)
-        self.parentLayout.addWidget(self.texturePath, 2, 1, 1, 4)
-        self.parentLayout.addWidget(self.searchTexture, 2, 5)
-        self.parentLayout.addWidget(self.useSkydome, 3, 5)
+        intensityLabel = QLabel("Instensity")
+        self.intensityValue = QLineEdit()
+        self.intensityValue.setText("0")
+
+        exposureLabel = QLabel("Exposure")
+        self.exposureValue = QLineEdit()
+        self.exposureValue.setText("0")
+
+        self.parentLayout.addWidget(texturePathLabel, 0, 0)
+        self.parentLayout.addWidget(self.texturePath, 0, 1, 1, 4)
+        self.parentLayout.addWidget(self.searchTexture, 0, 5)
+        self.parentLayout.addWidget(colorSpace, 3, 0)
+        self.parentLayout.addWidget(self.selectColorspace, 3, 1, 1, 5)
+        self.parentLayout.addWidget(mapping, 4, 0)
+        self.parentLayout.addWidget(self.mappingDrowdown, 4, 1, 1, 5)
+        self.parentLayout.addWidget(self.useTexture, 5, 5)
+        self.parentLayout.addWidget(intensityLabel, 6, 0)
+        self.parentLayout.addWidget(self.intensityValue, 6, 1)
+        self.parentLayout.addWidget(exposureLabel, 6, 3)
+        self.parentLayout.addWidget(self.exposureValue, 6, 4,)
+        self.parentLayout.addWidget(self.useSkydome, 7, 5)
 
         self.show()
         self.setLayout(self.parentLayout)
@@ -224,6 +301,15 @@ class SkydomeSetup(QWidget):
 
         if self.filePath:
             self.texturePath.insert(self.filePath[0])
+    
+    def envLightMaterial(gafferToEdit):
+        
+        rootPkg = gafferToEdit.getRootPackage()
+        lightPkg = rootPkg.getChildPackage('envLight')
+        lightMat = lightPkg.getMaterialNode()
+        lightMat.checkDynamicParameters()
+
+        return lightMat
 
 class CameraSettings(QWidget):
     def __init__(self):
