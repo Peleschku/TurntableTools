@@ -18,12 +18,11 @@ def shadingNodeCreate(nodeType, parent, dlShadingNodeType = 'DlShadingNode'):
 
 
 def materialAssignSetup(assetLocation, material, parent):
+    
     materialAssign = NodegraphAPI.CreateNode('MaterialAssign', parent)
-    cel = UI4.FormMaster.CreateParameterPolicy(None, materialAssign.getParameters('CEL.location'))
-    cel.setvalue(assetLocation)
-
-    matLocation = UI4.FormMaster.CreateParameterPolicy(None, materialAssign.getParameters('args.materialAssign'))
-    matLocation.setValue(material)
+    materialAssign.getParameter('CEL').setValue(assetLocation, 0)
+    materialAssign.getParameter('args.materialAssign.enable').setValue(1, 0)
+    materialAssign.getParameter('args.materialAssign.value').setValue(material, 0)
 
     return materialAssign
 
@@ -69,12 +68,16 @@ def multiMerge (nodesToMerge, parent):
 # --------------------------------- Additional helpful functions ------------------------------------
 # ---------------------------------------------------------------------------------------------------
 
-def getMaterialName(nmc):
+def getMaterialPath(nmc):
 
-    material = nmc.getNetworkMaterials()[0]
+    nmcRootLocation = nmc.getParameterValue('rootLocation', NodegraphAPI.GetCurrentTime())
+    
+    material = nmc.getNetworkMaterials()[-1]
     materialName = material.getParameterValue('name', NodegraphAPI.GetCurrentTime())
 
-    return materialName
+    materialPath = nmcRootLocation + "/" + materialName
+
+    return materialPath
 
 
 root = NodegraphAPI.GetRootNode()
@@ -90,15 +93,10 @@ nmc = NodegraphAPI.CreateNode('NetworkMaterialCreate', group)
 dlSurface = shadingNodeCreate('dlPrincipled', nmc)
 
 dlToNMC = nmcConnect(nmc, dlSurface, 'dlSurface')
-nmcTerminal = getMaterialName(nmc)
+nmcTerminal = getMaterialPath(nmc)
 
 assetNMCMerge = multiMerge([primitiveTest, nmc], group)
 
 gnomeAssign = materialAssignSetup(primName, nmcTerminal, group)
 
 mergeIntoAssign = connectTwoNodes(assetNMCMerge, gnomeAssign, 'out', 'input')
-
-
-
-
-
