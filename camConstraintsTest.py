@@ -21,6 +21,7 @@ root = NodegraphAPI.GetRootNode()
 pony = NodegraphAPI.CreateNode('PonyCreate', root)
 
 camera = NodegraphAPI.CreateNode('CameraCreate', root)
+camName = camera.getParameterValue('name', NodegraphAPI.GetCurrentTime())
 
 ponyCamMerge = multiMerge([pony, camera], root)
 

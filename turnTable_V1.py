@@ -64,6 +64,10 @@ class TurntableWindow(QWidget):
 
         self.cameraSetup = CameraSettings() 
 
+        # adding lookdev tools layout
+
+        self.LookdevSetup = LookDevelopmentEnvironment()
+
         
         # button that assembles the turn table when clicked
 
@@ -75,7 +79,8 @@ class TurntableWindow(QWidget):
         layout.addWidget(self.searchButton, 0, 4)
         layout.addWidget(self.lightingTabs, 1, 0, 1, 5)
         layout.addWidget(self.cameraSetup, 2, 0, 1, 5)      
-        layout.addWidget(self.createTurnTable, 3, 0, 1, 5)
+        layout.addWidget(self.LookdevSetup, 3, 0, 1, 5)
+        layout.addWidget(self.createTurnTable, 4, 0, 1, 5)
 
         self.show()
         self.setLayout(layout)
@@ -354,6 +359,51 @@ class CameraSettings(QWidget):
         self.show()
         self.setLayout(self.parentLayout)
     
+class LookDevelopmentEnvironment(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.root = NodegraphAPI.GetRootNode()
+        self.createUI()
 
+    def createWindow(self):
+
+        self.setGeometry(150, 150, 200, 250)
+        self.setWindowTitle('Look development Window')
+
+        self.createUI()
+        self.show()
+    
+    def createUI(self):
+
+        layout = QGridLayout()
+
+        lookdevHeading = QLabel("Look Development Assets")
+
+        backgrounds = QLabel("Backgrounds")
+
+        self.enablePlatform = QCheckBox("Enable Platform")
+        self.enableFlatBG = QCheckBox("Enable Flat Background")
+        self.enableDomeBG = QCheckBox("Enable Round Background")
+
+        lookdevTools = QLabel("LookDev Tools")
+
+        self.enableGrey = QCheckBox("Enable Grey Ball")
+        self.enableChrome = QCheckBox("Enable Chrome Ball")
+        self.enableChart = QCheckBox("Enable Macbeth Chart")
+        self.enableAll = QCheckBox("Enable All")
+
+        layout.addWidget(lookdevHeading, 0, 0)
+        layout.addWidget(backgrounds, 1, 0)
+        layout.addWidget(self.enablePlatform, 2, 0)
+        layout.addWidget(self.enableFlatBG, 2, 1)
+        layout.addWidget(self.enableDomeBG, 2, 3)
+        layout.addWidget(lookdevTools, 3, 0)
+        layout.addWidget(self.enableGrey, 4, 0)
+        layout.addWidget(self.enableChrome, 4, 1)
+        layout.addWidget(self.enableChart, 4, 2)
+        layout.addWidget(self.enableAll, 4, 3)
+
+        self.show()
+        self.setLayout(layout)
 
 turnTable = TurntableWindow()
