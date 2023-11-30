@@ -36,18 +36,25 @@ class TurntableWindow(QWidget):
 
         # adding the Skydome layout
 
-        self.SkydomeLayout = SkydomeSetup(skydomeLayout)
+        self.skydomeSetup = SkydomeSetup(skydomeLayout)
+
+        # adding camera layout
+
+        self.cameraSetup = CameraSettings()
+
+        # create turntable button
+        self.createTurnTable = QPushButton("Create Turn Table")
+        self.createTurnTable.clicked.connect(self.generateTT)
 
 
-        
-        
         # adding asset browser to the UI layout
         mainLayout.addWidget(assetLabel, 0, 0, 1, 1)
         mainLayout.addWidget(self.assetPath, 0, 1, 1, 6)
         mainLayout.addWidget(self.searchButton, 0, 7, 1, 1)
         # adding the skydome layout
-        mainLayout.addWidget(self.SkydomeLayout, 1, 0, 1, 8)
-        
+        mainLayout.addWidget(self.skydomeSetup, 1, 0, 1, 8)
+        mainLayout.addWidget(self.cameraSetup, 2, 0, 1, 8)
+        mainLayout.addWidget(self.createTurnTable, 3, 0, 1, 8)
         self.show()
         self.setLayout(mainLayout)
 
@@ -60,6 +67,130 @@ class TurntableWindow(QWidget):
 
         if self.filePath:
             self.assetPath.insert(self.filePath[0])
+    
+    
+    def multiMerge (self, nodesToMerge):
+        mergeNode = NodegraphAPI.CreateNode('Merge', self.root)
+
+        for node in nodesToMerge:
+
+            # grabbing the output ports of the nodes made outside of the function
+            outputPort = node.getOutputPort('out')
+
+            #adding input ports to the merge node  based on how many nodes were created
+            mergeInput = mergeNode.addInputPort('i')
+
+            #connecting the nodes
+            outputPort.connect(mergeInput)
+        
+        return mergeNode
+    
+    def dollyConstraintCreate(self, cameraPath, assetPath, offsetAmount):
+        dollyConstraint = NodegraphAPI.CreateNode('DollyConstraint', self.root)
+
+        dollyBasePath = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('basePath'))
+        dollyBasePath.setValue(cameraPath)
+        
+        dollyTargetPath = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('targetPath.i0'))
+        dollyTargetPath.setValue(assetPath)
+
+        dollyTargetBounds = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('targetBounds'))
+        dollyTargetBounds.setValue('sphere')
+
+        dollyOffsetAngle = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('angleOffset'))
+        dollyOffsetAngle.setValue(offsetAmount)
+
+        return dollyConstraint
+
+    
+    def generateTT(self):
+
+        alembicCreate = NodegraphAPI.CreateNode('Alembic_In', self.root)
+        assetSet = UI4.FormMaster.CreateParameterPolicy(None, alembicCreate.getParameter('abcAsset'))
+        assetSet.setValue(str(self.assetPath.text()))
+
+        assetLocation = alembicCreate.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+
+        camera = NodegraphAPI.CreateNode('CameraCreate', self.root)
+        
+        
+        cameraFOV = UI4.FormMaster.CreateParameterPolicy(None, camera.getParameter('fov'))
+        if self.cameraSetup.FOVValue.text() != 70:
+            cameraFOV.setValue(self.cameraSetup.FOVValue.text())
+
+
+        makeInteractive = UI4.FormMaster.CreateParameterPolicy(None, camera.getParameter('makeInteractive'))
+
+        if self.cameraSetup.makeCamInteractive.setCheckable(False):
+            makeInteractive.setValue('No')
+        else:
+            makeInteractive.setValue('Yes')
+        
+
+        camLocation = camera.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+
+        camAssetMerge = self.multiMerge([alembicCreate, camera])
+        camMergeOut = camAssetMerge.getOutputPort('out')
+
+        # creates the dolly constraint that snaps the camera to the Asset
+
+        dollyConstraint = self.dollyConstraintCreate(camLocation, assetLocation, self.cameraSetup.setDistance.text())
+        dollyInputPort = dollyConstraint.getInputPort('input')
+        dollyOutputPort = dollyConstraint.getOutputPort('out')
+
+        camMergeOut.connect(dollyInputPort)
+
+        # creates render settings node and assigns the camera resolution
+        # based on the selection in the UI's dropdown
+
+        renderSettings = NodegraphAPI.CreateNode('RenderSettings', self.root)
+
+        camResolution = UI4.FormMaster.CreateParameterPolicy(None, renderSettings.getParameter('args.renderSettings.resolution'))
+        camResolution.setValue(str(self.cameraSetup.camResDropdown.currentText()))
+
+        screenAdjustment = UI4.FormMaster.CreateParameterPolicy(None, renderSettings.getParameter('args.renderSettings.adjustScreenWindow'))
+        screenAdjustment.setValue(str(self.cameraSetup.screenDropDown.currentText()))
+
+        renderInput = renderSettings.getInputPort('input')
+
+        
+        # if the 'use skydome' check box is checked, create a skydome
+        # note to self: the line in the if statement is calling a function
+        # from within the SkydomeSetup class
+
+        if self.skydomeSetup.useSkydome.isChecked():
+            skydome = SkydomeSetup.createSkydome(self)
+            
+            # hooking the skydome up to the dolly constraint above it
+            # and the render settings below it
+
+            skydomeInput = skydome.getInputPort('in')
+            skydomeOutput = skydome.getOutputPort('out')
+            skydomeInput.connect(dollyOutputPort)
+            skydomeOutput.connect(renderInput)
+            lightMat = SkydomeSetup.envLightMaterial(skydome)
+            if self.skydomeSetup.intensityValue.text() != 0.00:
+                intensity = UI4.FormMaster.CreateParameterPolicy(None, lightMat.getParameter('shaders.dlEnvironmentParams.intensity'))
+                intensity.setValue(self.skydomeSetup.intensityValue.text())
+            if self.skydomeSetup.exposureValue.text() != 0.00:
+                exposure = UI4.FormMaster.CreateParameterPolicy(None, lightMat.getParameter('shaders.dlEnvironmentParams.exposure'))
+                exposure.setValue(self.skydomeSetup.exposureValue.text())
+        else:
+            # if the checkbox is not checked, 
+            dollyOutputPort.connect(renderInput)
+
+        # if the use texture checkbox in the Skydome tab is checked:
+        if self.skydomeSetup.useTexture.isChecked():
+            texturePath = UI4.FormMaster.CreateParameterPolicy(None, lightMat.getParameter('shaders.dlEnvironmentParams.image'))
+            texturePath.setValue(str(self.skydomeSetup.texturePath.text()))
+
+            colorSpace = UI4.FormMaster.CreateParameterPolicy(None, lightMat.getParameter('shaders.dlEnvironmentParams.image_meta_colorspace'))
+            colorSpace.setValue(str(self.skydomeSetup.selectColorspace.currentText()))
+
+        
+        
+        # if there are values in the intensity/exposure boxes, do the following:
+
 
 class SkydomeSetup(QWidget):
     def __init__(self, parentLayout):
@@ -98,7 +229,9 @@ class SkydomeSetup(QWidget):
         # light intensity
 
         intensityLabel = QLabel("Light Instensity")
-        self.intensityValue = QDoubleSpinBox()        
+        self.intensityValue = QDoubleSpinBox()
+        self.intensityValue.setMinimum(-99.99)
+        self.intensityValue.setMaximum(1000.00)
         self.intensitySlider = UI4.Widgets.QT4Widgets.SliderWidget(self)
         self.intensitySlider.setRange(0, 10)
         self.intensitySlider.valueChanged.connect(self.intensityChanged)
@@ -107,6 +240,7 @@ class SkydomeSetup(QWidget):
         exposureLabel = QLabel("Light Exposure")
         self.exposureValue = QDoubleSpinBox()
         self.exposureValue.setMinimum(-99.99)
+        self.exposureValue.setMaximum(1000.00)
         self.exposureSlider = UI4.Widgets.QT4Widgets.SliderWidget(self)
         self.exposureSlider.setRange(-5, 10)
         self.exposureSlider.valueChanged.connect(self.exposureChanged)
@@ -190,6 +324,52 @@ class SkydomeSetup(QWidget):
 
         return lightMat
 
+class CameraSettings(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.parentLayout = QGridLayout()
+        self.createModule()
+    
+    def createModule(self):
+        
+        cameraSettingsHeader = QLabel("Camera Settings")
+        camFOVLabel = QLabel('FOV Amount')
+        self.FOVValue = QSpinBox()
+        self.FOVValue.setValue(70)
+        self.FOVValue.setMaximum(1000)
+        
+        self.makeCamInteractive = QCheckBox('Lock Camera')
+        
+        camResolution = QLabel("Resolution")
+        self.camResDropdown = UI4.Widgets.ResolutionComboBox(self)
+        
 
+        adjustmentTypes = ['No adjustment',
+                           'Adjust height to match resolution',
+                           'Adjust width to match resolution']
+        
+        screenWindow = QLabel("Window Adjustment")
+        self.screenDropDown = UI4.Widgets.QtWidgets.QComboBox()
+        self.screenDropDown.addItems(adjustmentTypes)
+
+        distanceLabel = QLabel('Camera Distance')
+        self.setDistance = QSpinBox()
+        self.setDistance.setMinimum(0)
+        self.setDistance.setMaximum(1000)
+
+
+        self.parentLayout.addWidget(cameraSettingsHeader, 0, 0)
+        self.parentLayout.addWidget(camFOVLabel, 1, 0)
+        self.parentLayout.addWidget(self.FOVValue, 1, 1, 1, 1, Qt.AlignLeft)
+        self.parentLayout.addWidget(distanceLabel, 1, 3, 1, 1, Qt.AlignLeft)
+        self.parentLayout.addWidget(self.setDistance, 1, 4, 1, 1)
+        self.parentLayout.addWidget(camResolution, 2, 0)
+        self.parentLayout.addWidget(self.camResDropdown, 2, 1, 1, 7)
+        self.parentLayout.addWidget(screenWindow, 3, 0)
+        self.parentLayout.addWidget(self.screenDropDown, 3, 1, 1, 7)
+        self.parentLayout.addWidget(self.makeCamInteractive, 4, 7)
+        
+        self.show()
+        self.setLayout(self.parentLayout)
 
 open = TurntableWindow()
