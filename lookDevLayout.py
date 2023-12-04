@@ -67,6 +67,7 @@ class LookDevelopmentEnvironment(QWidget):
         dlPrincipled.getParameter('nodeType').setValue(nodeType, 0)
         dlPrincipled.getParameter('name').setValue(nodeType, 0)
         dlPrincipled.checkDynamicParameters()
+        
         return dlPrincipled
 
 
@@ -93,12 +94,17 @@ class LookDevelopmentEnvironment(QWidget):
     # ---------------------------------------------------------------------------------------------------
 
     def nmcConnect(self, networkMaterial, shadingNode, terminalInput):
-        terminal = networkMaterial.getNetworkMaterials()[0]
 
-        terminalOut = terminal.getInputPort(terminalInput)
+        if networkMaterial.getType() == 'NetworkMaterialCreate':
+            terminal = networkMaterial.getNetworkMaterials()[0]
+            terminalIn = terminal.getInputPort(terminalInput)
+        elif networkMaterial.getType() == 'NetworkMaterial':
+            terminalIn = networkMaterial.addInputPort(terminalInput)
+        
         shadingNodeOut = shadingNode.getOutputPort('outColor')
+        terminalIn.connect(shadingNodeOut)
 
-        terminalOut.connect(shadingNodeOut)
+        print(networkMaterial.getParameter('NodeType') == 'NetworkMaterialCreate')
 
 
     def connectTwoNodes(self, nodeOutput, nodeInput, outValue, inValue):
@@ -107,6 +113,7 @@ class LookDevelopmentEnvironment(QWidget):
         nodeInPort = nodeInput.getInputPort(inValue)
 
         nodeOutPort.connect(nodeInPort)
+        
 
     def multiMerge (self, nodesToMerge, parent):
         mergeNode = NodegraphAPI.CreateNode('Merge', parent)
@@ -132,20 +139,41 @@ class LookDevelopmentEnvironment(QWidget):
 
         return materialPath
     
-    def subDivideMesh(self, meshToSubdivide):
-        
+    def subDivideMesh(self, meshToSubdivide, parent):
+        attributeSet = NodegraphAPI.CreateNode('AttributeSet', parent)
+        meshLocation = meshToSubdivide.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+        path = UI4.FormMaster.CreateParameterPolicy(None, attributeSet.getParameter('paths.i0'))
+        path.setValue(meshLocation)
+
+        attributeName = UI4.FormMaster.CreateParameterPolicy(None, attributeSet.getParameter('attributeName'))
+        attributeName.setValue('Type')
+
+        attributeType = UI4.FormMaster.CreateParameterPolicy(None, attributeSet.getParameter('attributeType'))
+        attributeType.setValue('string')
+
+        subdivideMesh = UI4.FormMaster.CreateParameterPolicy(None, attributeSet.getParameter('stringValue.i0'))
+        subdivideMesh.setValue('subdmesh')
+
+        return attributeSet
+
+
     
 
     def generateScene(self):
 
-        nmc = NodegraphAPI.CreateNode('NetworkMaterialCreate', self.root)
-        nmcTerminal = self.getMaterialPath(nmc)
+        if self.enableGrey.isChecked() or self.enableChrome.isChecked() or self.enableChart.isChecked() or self.enableAll.isChecked() == True:
+            nmc = NodegraphAPI.CreateNode('NetworkMaterialCreate', self.root)
+            nmcTerminal = self.getMaterialPath(nmc)
         
-
+        # creating the setup for the grey shaderball
         if self.enableGrey.isChecked() == True:
             greySphere = self.geoCreate('poly sphere', self.root)
             greyRename = greySphere.getParameter('name').setValue('/root/world/geo/greySphere', 0)
             greySphereLocation = greySphere.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+
+            subDMesh = self.subDivideMesh(greySphere, self.root)
+
+            sphereIntoAttributes = self.connectTwoNodes(greySphere, subDMesh, 'out', 'A')
 
             greyMat = self.shadingNodeCreate('dlPrincipled', nmc)
             greyMatBase = UI4.FormMaster.CreateParameterPolicy(None, greyMat.getParameter('parameters.color'))
@@ -156,17 +184,47 @@ class LookDevelopmentEnvironment(QWidget):
             greyRoughness = UI4.FormMaster.CreateParameterPolicy(None, greyMat.getParameter('parameters.roughness')).setValue(0)
 
             greyNmcConnect = self.nmcConnect(nmc, greyMat, 'dlSurface')
-
-            greyMerge = self.multiMerge([greySphere, nmc], self.root)
-
+        
+            greyMerge = self.multiMerge([subDMesh, nmc], self.root)
             greyMatAssign = self.materialAssignSetup(greySphereLocation, nmcTerminal, self.root)
-
             greyMergeToAssign = self.connectTwoNodes(greyMerge, greyMatAssign, 'out', 'input')
+
+        # creating the setup for the chrome shaderball
+        if self.enableChrome.isChecked() == True:
             
+            chromeSphere = self.geoCreate('poly sphere', self.root)
+            chromeRename = chromeSphere.getParameter('name').setValue('/root/world/geo/chromeSphere', 0)
+            chromeLocation = chromeSphere.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+
+            chromeSubD = self.subDivideMesh(chromeSphere, self.root)
+
+            setChromeAttributes = self.connectTwoNodes(chromeSphere, chromeSubD, 'out', 'A')
+
+            if self.enableGrey.isChecked() == True:
+                chromeNM = NodegraphAPI.CreateNode('NetworkMaterial', nmc)
+            
+            chromeMat = self.shadingNodeCreate('dlPrincipled', nmc)
+
+            chromeMatBase = UI4.FormMaster.CreateParameterPolicy(None, chromeMat.getParameter('parameters.color'))
+            chromeMatBase.setValue([1,
+                                    1,
+                                    1])
+            chromeRoughness = UI4.FormMaster.CreateParameterPolicy(None, chromeMat.getParameter('parameters.roughness')).setValue(0)
+            chromeMetallic = UI4.FormMaster.CreateParameterPolicy(None, chromeMat.getParameter('parameters.metallic')).setValue(1)
 
 
+            if self.enableGrey.isChecked() == True:
+                # if there's more than one material in the NMC
+                chromeConnect = self.nmcConnect(chromeNM, chromeMat, 'dlSurface')
+            else:
+                # if the chrome ball is the only material in the NMC
+                chromeConnect = self.nmcConnect(nmc, chromeMat, 'dlSurface')
 
-
+'''
+        elif self.enableGrey.isChecked() and self.enableChrome.isChecked():
+            primGroup = self.groupNodeSetup(self.root)
+            matStackCreate = NodegraphAPI.CreateNode('GroupStack', root).setName('MaterialAssign Stack')
+            '''
 
 
 lookDevWindow = LookDevelopmentEnvironment()
