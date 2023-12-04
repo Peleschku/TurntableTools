@@ -202,6 +202,7 @@ class LookDevelopmentEnvironment(QWidget):
 
             if self.enableGrey.isChecked() == True:
                 chromeNM = NodegraphAPI.CreateNode('NetworkMaterial', nmc)
+                chromeLocation = '/root/materials/NetworkMaterial1'
             
             chromeMat = self.shadingNodeCreate('dlPrincipled', nmc)
 
@@ -219,6 +220,35 @@ class LookDevelopmentEnvironment(QWidget):
             else:
                 # if the chrome ball is the only material in the NMC
                 chromeConnect = self.nmcConnect(nmc, chromeMat, 'dlSurface')
+
+            if self.enableGrey.isChecked() != True:
+                chromeMerge = self.multiMerge([chromeSubD, nmc], self.root)
+                chromeMatAssign = self.materialAssignSetup(chromeLocation, '/root/materials/NetworkMaterial1', self.root)
+                chromMatConnect = self.connectTwoNodes(chromeMerge, chromeMatAssign, 'out', 'input')
+            elif self.enableGrey.isChecked() and self.enableChrome.isChecked():
+                primGroup = self.groupNodeSetup(self.root)
+
+                greySphere.setParent(primGroup)
+                subDMesh.setParent(primGroup)
+
+                chromeSphere.setParent(primGroup)
+                chromeSubD.setParent(primGroup)
+                
+                nmc.setParent(primGroup)
+
+                greyMerge.setParent(primGroup)
+                chromeMerge = greyMerge.addInputPort('i2')
+                chromeOut = chromeSubD.getOutputPort('out')
+
+                chromeOut.connect(chromeMerge)
+
+                nmcOut = greyMerge.getOutputPort('out')
+                groupReturn = primGroup.getReturnPort('groupOut')
+
+                nmcOut.connect(groupReturn)
+
+                groupOut = self.connectTwoNodes(primGroup, greyMatAssign, 'groupOut', 'input')
+
 
 '''
         elif self.enableGrey.isChecked() and self.enableChrome.isChecked():
