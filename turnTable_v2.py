@@ -699,7 +699,8 @@ class LookDevSetup(QWidget):
         '''
     def multiSetup(self, nmc, parent):
 
-        primGroup = groupNodeSetup(parent)
+        lookdevGroup = groupNodeSetup(parent)
+        primGroup = groupNodeSetup(lookdevGroup)
 
         self.greySphere.setParent(primGroup)
         self.greySphereTransform.setParent(primGroup)
@@ -722,7 +723,11 @@ class LookDevSetup(QWidget):
 
         nmcOut.connect(primGroupReturn)
 
-        groupOut = connectTwoNodes(primGroup, self.greyMaterialAssign, 'groupOut', 'input')
+        materialAssignStack = NodegraphAPI.CreateNode('GroupStack', lookdevGroup)
+
+        self.greyMaterialAssign.setParent(materialAssignStack)
+
+        groupOut = connectTwoNodes(primGroup, materialAssignStack, 'groupOut', 'in')
 
 
 
