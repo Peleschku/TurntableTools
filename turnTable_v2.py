@@ -539,9 +539,19 @@ class LookDevSetup(QWidget):
         greyNameSet = self.greySphere.getParameter('name').setValue('/root/world/geo/greySphere', 0)
         greySphereLocation = self.greySphere.getParameterValue('name', NodegraphAPI.GetCurrentTime())
 
+        self.greySphereTransform = NodegraphAPI.CreateNode('Transform3D', parent)
+        transformPath = UI4.FormMaster.CreateParameterPolicy(None, self.greySphereTransform.getParameter('path'))
+        transformPath.setValue(greySphereLocation)
+        transformTranslate = UI4.FormMaster.CreateParameterPolicy(None, self.greySphereTransform.getParameter('translate'))
+        transformTranslate.setValue([-1.5,
+                                     0,
+                                     0])
+        
+        primitiveIntoTransform = connectTwoNodes(self.greySphere, self.greySphereTransform, 'out', 'in')
+
         self.greyAttributeSet = subDivideMesh(self.greySphere, parent)
 
-        greyAttributeConnect = connectTwoNodes(self.greySphere, self.greyAttributeSet, 'out', 'A')
+        greyAttributeConnect = connectTwoNodes(self.greySphereTransform, self.greyAttributeSet, 'out', 'A')
 
         # setting up the material
         greyMat = shadingNodeCreate('dlPrincipled', networkMaterialCreate)
@@ -566,9 +576,19 @@ class LookDevSetup(QWidget):
         chromeNameSet = self.chromeSphere.getParameter('name').setValue('/root/world/geo/chromeSphere', 0)
         chromeSphereLocation = self.chromeSphere.getParameterValue('name', NodegraphAPI.GetCurrentTime())
 
+        self.chromeSphereTransform = NodegraphAPI.CreateNode('Transform3D', parent)
+        transformPath = UI4.FormMaster.CreateParameterPolicy(None, self.chromeSphereTransform.getParameter('path'))
+        transformPath.setValue(chromeSphereLocation)
+        transformTranslate = UI4.FormMaster.CreateParameterPolicy(None, self.chromeSphereTransform.getParameter('translate'))
+        transformTranslate.setValue([1.5,
+                                     0,
+                                     0])
+        
+        primitiveIntoTransform = connectTwoNodes(self.chromeSphere, self.chromeSphereTransform, 'out', 'in')
+
         self.chromeAttributeSet = subDivideMesh(self.chromeSphere, parent)
 
-        chromeAttributeConnect = connectTwoNodes(self.chromeSphere, self.chromeAttributeSet, 'out', 'A')
+        chromeAttributeConnect = connectTwoNodes(self.chromeSphereTransform, self.chromeAttributeSet, 'out', 'A')
 
         if self.enableGrey.isChecked() == True:
             chromeNetworkMaterial = NodegraphAPI.CreateNode('NetworkMaterial', nmc)
@@ -593,7 +613,7 @@ class LookDevSetup(QWidget):
         else:
             chromeConnectInsideNMC = nmcConnect(nmc, chromeMaterial, 'dlSurface')
 
-        if self.enableGrey != True:
+        if self.enableGrey.isChecked() != True:
             self.chromeMaterialMerge = multiMerge([self.chromeAttributeSet, nmc], parent)
             self.chromeMaterialAssign = materialAssignSetup(chromeSphereLocation, chromeMaterialLocation, parent)
             chromeMaterialIntoAssign = connectTwoNodes(self.chromeMaterialMerge, self.chromeMaterialAssign, 'out', 'input')
@@ -603,9 +623,11 @@ class LookDevSetup(QWidget):
         primGroup = groupNodeSetup(parent)
 
         self.greySphere.setParent(primGroup)
+        self.greySphereTransform.setParent(primGroup)
         self.greyAttributeSet.setParent(primGroup)
 
         self.chromeSphere.setParent(primGroup)
+        self.chromeSphereTransform.setParent(primGroup)
         self.chromeAttributeSet.setParent(primGroup)
         
         nmc.setParent(primGroup)
