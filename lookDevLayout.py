@@ -128,12 +128,12 @@ class LookDevelopmentEnvironment(QWidget):
     # --------------------------------- Additional helpful functions ------------------------------------
     # ---------------------------------------------------------------------------------------------------
 
-    def getMaterialPath(self, nmc):
-
-        nmcRootLocation = nmc.getParameterValue('rootLocation', NodegraphAPI.GetCurrentTime())
+    def getMaterialPath(self, networkMaterialNode):
         
-        material = nmc.getNetworkMaterials()[-1]
-        materialName = material.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+        materialName = networkMaterialNode.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+
+        nmc = networkMaterialNode.getParent()
+        nmcRootLocation = nmc.getParameterValue('rootLocation', NodegraphAPI.GetCurrentTime())
 
         materialPath = nmcRootLocation + "/" + materialName
 

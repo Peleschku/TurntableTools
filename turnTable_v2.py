@@ -76,16 +76,18 @@ def multiMerge (nodesToMerge, parent):
 # --------------------------------- Additional helpful functions ------------------------------------
 # ---------------------------------------------------------------------------------------------------
 
-def getMaterialPath(nmc):
+def getMaterialPath(networkMaterialNode):
 
+        
+    materialName = networkMaterialNode.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+
+    nmc = networkMaterialNode.getParent()
     nmcRootLocation = nmc.getParameterValue('rootLocation', NodegraphAPI.GetCurrentTime())
-    
-    material = nmc.getNetworkMaterials()[-1]
-    materialName = material.getParameterValue('name', NodegraphAPI.GetCurrentTime())
 
     materialPath = nmcRootLocation + "/" + materialName
 
     return materialPath
+
 
 def subDivideMesh( meshToSubdivide, parent):
     attributeSet = NodegraphAPI.CreateNode('AttributeSet', parent)
@@ -216,15 +218,18 @@ class TurntableWindow(QWidget):
 
         if self.lookDevSetup.enableGrey.isChecked() or self.lookDevSetup.enableChrome.isChecked() or self.lookDevSetup.enableChart.isChecked() or self.lookDevSetup.enableAll.isChecked() == True:
             networkMaterialCreate = NodegraphAPI.CreateNode('NetworkMaterialCreate', self.root)
-            nmcTerminal = getMaterialPath(networkMaterialCreate)
+            nmcTerminal = getMaterialPath(networkMaterialCreate.getNetworkMaterials()[0])
 
-        if self.lookDevSetup.enableGrey.isChecked() == True:
+        if self.lookDevSetup.enableGrey.isChecked():
             greySphereSetup = self.lookDevSetup.createGreyBall(networkMaterialCreate, nmcTerminal, self.root)
         
-        if self.lookDevSetup.enableChrome.isChecked() == True :
+        if self.lookDevSetup.enableChrome.isChecked():
             chromeSphereSetup = self.lookDevSetup.createChromeBall(networkMaterialCreate, nmcTerminal, self.root)
+        
+        if self.lookDevSetup.enableChart.isChecked():
+            chartSetup = self.lookDevSetup.createMacbethChart(networkMaterialCreate, nmcTerminal, self.root)
 
-        if self.lookDevSetup.enableGrey.isChecked() and self.lookDevSetup.enableChrome.isChecked() == True:
+        if self.lookDevSetup.enableGrey.isChecked() and self.lookDevSetup.enableChrome.isChecked():
             multiSetup = self.lookDevSetup.multiSetup(networkMaterialCreate, self.root)
 
         alembicCreate = NodegraphAPI.CreateNode('Alembic_In', self.root)
@@ -251,16 +256,32 @@ class TurntableWindow(QWidget):
 
         camLocation = camera.getParameterValue('name', NodegraphAPI.GetCurrentTime())
 
-        camAssetMerge = self.multiMerge([alembicCreate, camera])
-        camMergeOut = camAssetMerge.getOutputPort('out')
+        # creates nmc containing material that will be assigned to the asset
+        assetNMC = NodegraphAPI.CreateNode('NetworkMaterialCreate', self.root)
+        assetMaterialLocation = getMaterialPath(assetNMC.getNetworkMaterials()[0])
 
-        # creates the dolly constraint that snaps the camera to the Asset
+        assetShader = shadingNodeCreate('dlPrincipled', assetNMC)
+        assetBaseColor = UI4.FormMaster.CreateParameterPolicy(None, assetShader.getParameter('parameters.color'))
+        assetBaseColor.setValue([0.18,
+                                 0.18,
+                                 0.18])
 
+        shaderConnect = nmcConnect(assetNMC, assetShader, 'dlSurface')
+
+
+        # merging the geo, camera and NMC all together
+
+        camAssetMerge = multiMerge([alembicCreate, camera, assetNMC], self.root)
+
+
+        # creating the material assign and then connecting it
+
+        assetMaterialAssign = materialAssignSetup(assetLocation, assetMaterialLocation, self.root)
+        nmcIntoAssign = connectTwoNodes(camAssetMerge, assetMaterialAssign, 'out', 'input')
+        
+        # creates the dolly constraint and then connects it
         dollyConstraint = self.dollyConstraintCreate(camLocation, assetLocation, self.cameraSetup.setDistance.text())
-        dollyInputPort = dollyConstraint.getInputPort('input')
-        dollyOutputPort = dollyConstraint.getOutputPort('out')
-
-        camMergeOut.connect(dollyInputPort)
+        assignIntoDolly = connectTwoNodes(assetMaterialAssign, dollyConstraint, 'out', 'input')
 
         # creates render settings node and assigns the camera resolution
         # based on the selection in the UI's dropdown
@@ -281,16 +302,14 @@ class TurntableWindow(QWidget):
         # from within the SkydomeSetup class
 
         if self.skydomeSetup.useSkydome.isChecked():
-            skydome = SkydomeSetup.createSkydome(self)
+            skydome = self.skydomeSetup.createSkydome(self.root)
             
-            # hooking the skydome up to the dolly constraint above it
-            # and the render settings below it
-
-            skydomeInput = skydome.getInputPort('in')
-            skydomeOutput = skydome.getOutputPort('out')
-            skydomeInput.connect(dollyOutputPort)
-            skydomeOutput.connect(renderInput)
-            lightMat = SkydomeSetup.envLightMaterial(skydome)
+            dollyToSkydome = connectTwoNodes(dollyConstraint, skydome, 'out', 'in')
+            skydomeToRenderSettings = connectTwoNodes(skydome, renderSettings, 'out', 'input')
+            
+            lightMat = self.skydomeSetup.envLightMaterial(skydome)
+            
+            
             if self.skydomeSetup.intensityValue.text() != 0.00:
                 intensity = UI4.FormMaster.CreateParameterPolicy(None, lightMat.getParameter('shaders.dlEnvironmentParams.intensity'))
                 intensity.setValue(self.skydomeSetup.intensityValue.text())
@@ -299,7 +318,7 @@ class TurntableWindow(QWidget):
                 exposure.setValue(self.skydomeSetup.exposureValue.text())
         else:
             # if the checkbox is not checked, 
-            dollyOutputPort.connect(renderInput)
+            dollyConnect = connectTwoNodes(dollyConstraint, renderSettings, 'out', 'input')
 
         # if the use texture checkbox in the Skydome tab is checked:
         if self.skydomeSetup.useTexture.isChecked():
@@ -309,9 +328,11 @@ class TurntableWindow(QWidget):
             colorSpace = UI4.FormMaster.CreateParameterPolicy(None, lightMat.getParameter('shaders.dlEnvironmentParams.image_meta_colorspace'))
             colorSpace.setValue(str(self.skydomeSetup.selectColorspace.currentText()))
 
+        allNodes = NodegraphAPI.GetAllNodes()
+        NodegraphAPI.ArrangeNodes(allNodes, nodeGraphLengthSpacing = 250, nodeGraphWidthSpacing = 100)
+
         
         
-        # if there are values in the intensity/exposure boxes, do the following:
 
 
 class SkydomeSetup(QWidget):
@@ -420,8 +441,8 @@ class SkydomeSetup(QWidget):
 
     # creates a gaffer three containing a skydome
 
-    def createSkydome(self):
-        gafferThree = NodegraphAPI.CreateNode("GafferThree", self.root)
+    def createSkydome(self, parent):
+        gafferThree = NodegraphAPI.CreateNode("GafferThree", parent)
         rootPackage = gafferThree.getRootPackage()
         rootPackage.createChildPackage('EnvironmentLightPackage', 'envLight')
 
@@ -437,7 +458,7 @@ class SkydomeSetup(QWidget):
     
     # grabs the material node inside the gaffer three
 
-    def envLightMaterial(gafferToEdit):
+    def envLightMaterial(self, gafferToEdit):
         
         rootPkg = gafferToEdit.getRootPackage()
         lightPkg = rootPkg.getChildPackage('envLight')
@@ -538,14 +559,18 @@ class LookDevSetup(QWidget):
         self.greySphere = geoCreate('poly sphere', parent)
         greyNameSet = self.greySphere.getParameter('name').setValue('/root/world/geo/greySphere', 0)
         greySphereLocation = self.greySphere.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+        greySphereInteractive = UI4.FormMaster.CreateParameterPolicy(None, self.greySphere.getParameter('makeInteractive'))
+        greySphereInteractive.setValue('No')
 
         self.greySphereTransform = NodegraphAPI.CreateNode('Transform3D', parent)
         transformPath = UI4.FormMaster.CreateParameterPolicy(None, self.greySphereTransform.getParameter('path'))
         transformPath.setValue(greySphereLocation)
         transformTranslate = UI4.FormMaster.CreateParameterPolicy(None, self.greySphereTransform.getParameter('translate'))
         transformTranslate.setValue([-1.5,
-                                     0,
+                                     3.0,
                                      0])
+        transformInteractive = UI4.FormMaster.CreateParameterPolicy(None, self.greySphereTransform.getParameter('makeInteractive'))
+        transformInteractive.setValue('No')
         
         primitiveIntoTransform = connectTwoNodes(self.greySphere, self.greySphereTransform, 'out', 'in')
 
@@ -575,14 +600,18 @@ class LookDevSetup(QWidget):
         self.chromeSphere = geoCreate('poly sphere', parent)
         chromeNameSet = self.chromeSphere.getParameter('name').setValue('/root/world/geo/chromeSphere', 0)
         chromeSphereLocation = self.chromeSphere.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+        chromeSphereInteractive = UI4.FormMaster.CreateParameterPolicy(None, self.chromeSphere.getParameter('makeInteractive'))
+        chromeSphereInteractive.setValue('No')
 
         self.chromeSphereTransform = NodegraphAPI.CreateNode('Transform3D', parent)
         transformPath = UI4.FormMaster.CreateParameterPolicy(None, self.chromeSphereTransform.getParameter('path'))
         transformPath.setValue(chromeSphereLocation)
         transformTranslate = UI4.FormMaster.CreateParameterPolicy(None, self.chromeSphereTransform.getParameter('translate'))
         transformTranslate.setValue([1.5,
-                                     0,
+                                     3.0,
                                      0])
+        transformInteractive = UI4.FormMaster.CreateParameterPolicy(None, self.chromeSphereTransform.getParameter('makeInteractive'))
+        transformInteractive.setValue('No')
         
         primitiveIntoTransform = connectTwoNodes(self.chromeSphere, self.chromeSphereTransform, 'out', 'in')
 
@@ -592,7 +621,7 @@ class LookDevSetup(QWidget):
 
         if self.enableGrey.isChecked() == True:
             chromeNetworkMaterial = NodegraphAPI.CreateNode('NetworkMaterial', nmc)
-            chromeMaterialLocation = '/root/materials/NetworkMaterial1'
+            chromeMaterialLocation = getMaterialPath(chromeNetworkMaterial)
         else:
             chromeMaterialLocation = nmcLocation
         
@@ -618,6 +647,56 @@ class LookDevSetup(QWidget):
             self.chromeMaterialAssign = materialAssignSetup(chromeSphereLocation, chromeMaterialLocation, parent)
             chromeMaterialIntoAssign = connectTwoNodes(self.chromeMaterialMerge, self.chromeMaterialAssign, 'out', 'input')
 
+    def createMacbethChart(self, nmc, nmcLocation, parent):
+        networkMaterialCreate = nmc
+
+        self.chart = geoCreate('poly plane', parent)
+        chartNameSet = self.chart.getParameter('name').setValue('/root/world/geo/colorChart', 0)
+        chartLocation = self.chart.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+        chartInteractive = UI4.FormMaster.CreateParameterPolicy(None, self.chart.getParameter('makeInteractive'))
+        chartInteractive.setValue('No')
+
+        self.chartTransform = NodegraphAPI.CreateNode('Transform3D', parent)
+        transformPath = UI4.FormMaster.CreateParameterPolicy(None, self.chartTransform.getParameter('path'))
+        transformPath.setValue(chartLocation)
+        transformRotate = UI4.FormMaster.CreateParameterPolicy(None, self.chartTransform.getParameter('rotate'))
+        transformRotate.setValue([90,
+                                  0,
+                                  0])
+        transformScale = UI4.FormMaster.CreateParameterPolicy(None, self.chartTransform.getParameter('scale'))
+        transformScale.setValue([5,
+                                 0,
+                                 3])
+        transformInteractive = UI4.FormMaster.CreateParameterPolicy(None, self.chart.getParameter('makeInteractive'))
+        transformInteractive.setValue('No')
+
+        geoIntoTransform = connectTwoNodes(self.chart, self.chartTransform, 'out', 'in')
+
+        if self.enableGrey.isChecked() or self.enableChrome.isChecked() == True:
+            chartNetworkMaterial = NodegraphAPI.CreateNode('NetworkMaterial', nmc)
+            chartMaterialLocation = getMaterialPath(chartNetworkMaterial)
+        else:
+            chartMaterialLocation = nmcLocation
+        
+        chartMaterial = shadingNodeCreate('dlPrincipled', nmc)
+        chartTexture = shadingNodeCreate('dlTexture', nmc)
+        placeTexture = shadingNodeCreate('place2dTexture', nmc)
+
+        uvCoordsIntoTexture = connectTwoNodes(placeTexture, chartTexture, 'outUV', 'uvCoord')
+        textureIntoSurface = connectTwoNodes(chartTexture, chartMaterial, 'outColor', 'color')
+        
+        
+        if self.enableGrey.isChecked() or self.enableChrome.isChecked() == True:
+            chartConnectInsideNMC = nmcConnect(chartNetworkMaterial, chartMaterial, 'dlSurface')
+        else:
+            chartConnectInsideNMC = nmcConnect(nmc, chartMaterial, 'dlSurface')
+
+        '''
+        if self.enableGrey.isChecked() or self.enableChrome.isChecked() != True:
+            self.chromeMaterialMerge = multiMerge([self.chromeAttributeSet, nmc], parent)
+            self.chromeMaterialAssign = materialAssignSetup(chromeSphereLocation, chromeMaterialLocation, parent)
+            chromeMaterialIntoAssign = connectTwoNodes(self.chromeMaterialMerge, self.chromeMaterialAssign, 'out', 'input')
+        '''
     def multiSetup(self, nmc, parent):
 
         primGroup = groupNodeSetup(parent)
@@ -636,7 +715,6 @@ class LookDevSetup(QWidget):
         if self.enableGrey.isChecked() and self.enableChrome.isChecked():
             addMergePort = self.greyGeoNMCMerge.addInputPort('i2')
             chromeMergeOut = self.chromeAttributeSet.getOutputPort('out')
-
             addMergePort.connect(chromeMergeOut)
         
         nmcOut = self.greyGeoNMCMerge.getOutputPort('out')
