@@ -703,6 +703,14 @@ class LookDevSetup(QWidget):
             chartConnectInsideNMC = nmcConnect(chartNetworkMaterial, chartMaterial, 'dlSurface')
         else:
             chartConnectInsideNMC = nmcConnect(nmc, chartMaterial, 'dlSurface')
+        
+
+        
+        if self.enableGrey.isChecked() or self.enableChrome.isChecked() != True:
+            self.chartMatGeoMerge = multiMerge([self.chromeAttributeSet, nmc], parent)
+            self.chartMaterialAssign = materialAssignSetup(chartLocation, chartMaterialLocation, parent)
+            chartMaterialIntoAssign = connectTwoNodes(self.chartMatGeoMerge, self.chartMaterialAssign, 'out', 'input')
+
 
         '''
         if self.enableGrey.isChecked() or self.enableChrome.isChecked() != True:
