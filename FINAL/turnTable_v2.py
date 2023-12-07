@@ -52,7 +52,6 @@ def nmcConnect(networkMaterial, shadingNode, terminalInput):
     shadingNodeOut = shadingNode.getOutputPort('outColor')
     terminalIn.connect(shadingNodeOut)
 
-    print(networkMaterial.getParameter('NodeType') == 'NetworkMaterialCreate')
 
 
 def connectTwoNodes(nodeOutput, nodeInput, outValue, inValue):
@@ -89,14 +88,13 @@ def getMaterialPath(networkMaterialNode):
     return materialPath
 
 
-def subDivideMesh( meshToSubdivide, parent):
+def subDivideMesh( meshLocation, parent):
     attributeSet = NodegraphAPI.CreateNode('AttributeSet', parent)
-    meshLocation = meshToSubdivide.getParameterValue('name', NodegraphAPI.GetCurrentTime())
     path = UI4.FormMaster.CreateParameterPolicy(None, attributeSet.getParameter('paths.i0'))
     path.setValue(meshLocation)
 
     attributeName = UI4.FormMaster.CreateParameterPolicy(None, attributeSet.getParameter('attributeName'))
-    attributeName.setValue('Type')
+    attributeName.setValue('type')
 
     attributeType = UI4.FormMaster.CreateParameterPolicy(None, attributeSet.getParameter('attributeType'))
     attributeType.setValue('string')
@@ -252,6 +250,8 @@ class TurntableWindow(QWidget):
         elif self.lookDevSetup.enableAll.isChecked() != True:
             camAssetMerge = multiMerge([alembicCreate, camera, assetNMC], self.root)
 
+        if self.lookDevSetup.enableBackdrop.isChecked():
+            createBackdrop = self.lookDevSetup.addBackdrop(self.root)
 
         # creating the material assign and then connecting it
 
@@ -556,7 +556,7 @@ class LookDevSetup(QWidget):
         primitiveIntoTransform = connectTwoNodes(self.greySphere, self.greySphereTransform, 'out', 'in')
 
         # Grey Sphere subdivide
-        self.greyAttributeSet = subDivideMesh(self.greySphere, primGroup)
+        self.greyAttributeSet = subDivideMesh(greySphereLocation, primGroup)
         greyAttributeConnect = connectTwoNodes(self.greySphereTransform, self.greyAttributeSet, 'out', 'A')
         
         # Grey Sphere material setup
@@ -590,7 +590,7 @@ class LookDevSetup(QWidget):
         primitiveIntoTransform = connectTwoNodes(self.chromeSphere, self.chromeSphereTransform, 'out', 'in')
         
         # subdividing the sphere
-        self.chromeAttributeSet = subDivideMesh(self.chromeSphere, primGroup)
+        self.chromeAttributeSet = subDivideMesh(chromeSphereLocation, primGroup)
         chromeAttributeConnect = connectTwoNodes(self.chromeSphereTransform, self.chromeAttributeSet, 'out', 'A')
 
         # creating the Chrome material
@@ -632,14 +632,17 @@ class LookDevSetup(QWidget):
         geoIntoTransform = connectTwoNodes(self.chart, self.chartTransform, 'out', 'in')
 
         # subdividing the chart
-        self.chartAttributeSet = subDivideMesh(self.chart, primGroup)
+        self.chartAttributeSet = subDivideMesh(chartLocation, primGroup)
         transformIntoAttributeSet = connectTwoNodes(self.chartTransform, self.chartAttributeSet, 'out', 'A')
 
         # creating the chart material
         chartNetworkMaterial = NodegraphAPI.CreateNode('NetworkMaterial', networkMaterialCreate)
         chartMaterialLocation = getMaterialPath(chartNetworkMaterial)
         chartMaterial = shadingNodeCreate('dlPrincipled', networkMaterialCreate)
-        chartTexture = shadingNodeCreate('dlTexture', networkMaterialCreate)
+        chartTexture = shadingNodeCreate('file', networkMaterialCreate)
+        texturePath = UI4.FormMaster.CreateParameterPolicy(None, chartTexture.getParameter('parameters.fileTextureName'))
+        texturePath.setValue('C:/Users/AdelePeleschka/TurntableTools/FINAL/sRGB_ColorChecker.tdl')
+        
         placeTexture = shadingNodeCreate('place2dTexture', networkMaterialCreate)
         uvCoordsIntoTexture = connectTwoNodes(placeTexture, chartTexture, 'outUV', 'uvCoord')
         textureIntoSurface = connectTwoNodes(chartTexture, chartMaterial, 'outColor', 'color')
@@ -709,6 +712,61 @@ class LookDevSetup(QWidget):
         chartMaterialAssignOut.connect(materialAssignStackReturnPort)
 
         return lookdevGroup
+    
+    def addBackdrop(self, parent):
+
+        backdropGroup = groupNodeSetup(parent)
+
+        backdropCreate = NodegraphAPI.CreateNode('Alembic_In', backdropGroup)
+        backdropSetName = backdropCreate.getParameter('name').setValue('/root/world/backdrop', 0)
+        backdropLocation = backdropCreate.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+
+        backdropGeoIn = UI4.FormMaster.CreateParameterPolicy(None, backdropCreate.getParameter('abcAsset'))
+        backdropGeoIn.setValue('C:/Users/AdelePeleschka/TurntableTools/FINAL/ground.abc')
+
+        backdropAttributeSet = subDivideMesh(backdropLocation + '/groundPlane/groundPlaneShape', backdropGroup)
+
+        backdropIntoAttributeSet = connectTwoNodes(backdropCreate, backdropAttributeSet, 'out', 'A')
+
+        removeShadows = NodegraphAPI.CreateNode('DlObjectSettings', backdropGroup)
+        shadowsGeoLocation = UI4.FormMaster.CreateParameterPolicy(None, removeShadows.getParameter('CEL'))
+        shadowsGeoLocation.setValue(backdropLocation + '/groundPlane/groundPlaneShape')
+        castShadows = UI4.FormMaster.CreateParameterPolicy(None, removeShadows.getParameter('args.dlObjectSettings.visibility.shadow'))
+        castShadows.setValue(0)
+
+        attributeSetIntoShadows = connectTwoNodes(backdropAttributeSet, removeShadows, 'out', 'input')
+
+        backdropNMC = NodegraphAPI.CreateNode('NetworkMaterialCreate', backdropGroup)
+        backdropMaterial = getMaterialPath(backdropNMC.getNetworkMaterials()[0])
+
+        dlPrincipled = shadingNodeCreate('dlPrincipled', backdropNMC)
+        dlRoughness = UI4.FormMaster.CreateParameterPolicy(None, dlPrincipled.getParameter('parameters.roughness'))
+        dlRoughness.setValue(1)
+        dlSpec = UI4.FormMaster.CreateParameterPolicy(None, dlPrincipled.getParameter('parameters.specular_level'))
+        dlSpec.setValue(0)
+        
+        dlTexture = shadingNodeCreate('file', backdropNMC)
+        texturePath = UI4.FormMaster.CreateParameterPolicy(None, dlTexture.getParameter('parameters.fileTextureName'))
+        texturePath.setValue('C:/Users/AdelePeleschka/TurntableTools/FINAL/Floor_Color_50percent.tdl')
+        placeTexture = shadingNodeCreate('place2dTexture', backdropNMC)
+
+        uvCoordsIntoTexture = connectTwoNodes(placeTexture, dlTexture, 'outUV', 'uvCoord')
+        textureIntoSurface = connectTwoNodes(dlTexture, dlPrincipled, 'outColor', 'color')
+        connectChartInsideNMC = nmcConnect(backdropNMC, dlPrincipled, 'dlSurface')
+
+        attributeSetNMCMerge = multiMerge([removeShadows, backdropNMC], backdropGroup)
+
+        backdropMatAssign = materialAssignSetup(backdropLocation, backdropMaterial, backdropGroup)
+        mergeIntoMatAssign = connectTwoNodes(attributeSetNMCMerge, backdropMatAssign, 'out', 'input')
+
+        matAssignOutput = backdropMatAssign.getOutputPort('out')
+        backdropGroupReturnPort = backdropGroup.getReturnPort('groupOut')
+
+        matAssignOutput.connect(backdropGroupReturnPort)
+
+        return backdropGroup
+
+        
 
 
 open = TurntableWindow()
