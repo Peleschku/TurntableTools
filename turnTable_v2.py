@@ -195,6 +195,9 @@ class TurntableWindow(QWidget):
         dollyOffsetAngle = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('angleOffset'))
         dollyOffsetAngle.setValue(offsetAmount)
 
+        dollyConstraintList = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('addToConstraintList'))
+        dollyConstraintList.setValue(1.0)
+
         return dollyConstraint
 
     
@@ -283,9 +286,13 @@ class TurntableWindow(QWidget):
             parentChildConstraint = NodegraphAPI.CreateNode('ParentChildConstraint', self.root)
             parentChildConstraint.getParameter('basePath').setValue('/root/world/LookDevScene', 1)
             parentChildConstraint.getParameter('targetPath').setValue('/root/world/cam/camera', 1)
+            parentChildConstraint.getParameter('addToConstraintList').setValue(1, 1)
+            constraintResolve = NodegraphAPI.CreateNode('ConstraintResolve', self.root)
+
             dollyIntoParentConstraint = connectTwoNodes(dollyConstraint, parentChildConstraint, 'out', 'input')
-            parentChildIntoGaffer = connectTwoNodes(parentChildConstraint, skydome, 'out', 'in')
-        elif self.lookDevSetup.enableAll.isChecked() != True:
+            parentIntoResolver = connectTwoNodes(parentChildConstraint, constraintResolve, 'out', 'input')
+            parentChildIntoGaffer = connectTwoNodes(constraintResolve, skydome, 'out', 'in')
+        else:
             dollyToSkydome = connectTwoNodes(dollyConstraint, skydome, 'out', 'in')
 
         
@@ -297,8 +304,7 @@ class TurntableWindow(QWidget):
             colorSpace = UI4.FormMaster.CreateParameterPolicy(None, lightMat.getParameter('shaders.dlEnvironmentParams.image_meta_colorspace'))
             colorSpace.setValue(str(self.skydomeSetup.selectColorspace.currentText()))
 
-        
-        dollyToSkydome = connectTwoNodes(dollyConstraint, skydome, 'out', 'in')
+    
         skydomeToRenderSettings = connectTwoNodes(skydome, renderSettings, 'out', 'input')
 
         allNodes = NodegraphAPI.GetAllNodes()
@@ -659,14 +665,14 @@ class LookDevSetup(QWidget):
         setTransformPath = UI4.FormMaster.CreateParameterPolicy(None, lookdevTransform.getParameter('path'))
         setTransformPath.setValue('/root/world/LookDevScene')
         scaleLookdev = UI4.FormMaster.CreateParameterPolicy(None, lookdevTransform.getParameter('scale'))
-        scaleLookdev.setValue([0.2,
-                               0.2,
-                               0.2])
+        scaleLookdev.setValue([0.08,
+                               0.08,
+                               0.08])
 
         transformLookdev = UI4.FormMaster.CreateParameterPolicy(None, lookdevTransform.getParameter('translate'))
-        transformLookdev.setValue([-1.0,
-                                   0.5,
-                                   2.0])
+        transformLookdev.setValue([-0.7,
+                                   -0.5,
+                                   -2.0])
 
         shadowsToTransform = connectTwoNodes(removeShadows, lookdevTransform, 'out', 'in')
 
