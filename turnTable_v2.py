@@ -119,7 +119,7 @@ class TurntableWindow(QWidget):
     def createWindow(self):
 
         self.setGeometry(250, 250, 500, 250)
-        self.setWindowTitle('Please work')
+        self.setWindowTitle("Adele's TurnTable Window!")
 
         self.populateUI()
         self.show()
@@ -591,8 +591,20 @@ class LookDevSetup(QWidget):
 
         self.greyGeoNMCMerge = multiMerge([self.greyAttributeSet, networkMaterialCreate], parent)
 
-        self.greyMaterialAssign = materialAssignSetup(greySphereLocation, nmcLocation, parent)
-        self.greyMaterialIntoAssign = connectTwoNodes(self.greyGeoNMCMerge, self.greyMaterialAssign, 'out', 'input')
+        if self.enableGrey.isChecked() and self.enableChrome.isChecked():
+            self.materialAssignStack = NodegraphAPI.CreateNode('GroupStack', parent)
+            self.materialAssignStack.setChildNodeType('MaterialAssign')
+            self.greyMaterialAssign = materialAssignSetup(greySphereLocation, nmcLocation, self.materialAssignStack)
+
+            materialStackInternalInput = self.materialAssignStack.getSendPort('in')
+            greyMaterialAssignInput = self.greyMaterialAssign.getInputPort('input')
+            materialStackInternalInput.connect(greyMaterialAssignInput)
+
+            self.assignStackReturn = self.materialAssignStack.getReturnPort('out')
+        
+        else:
+            self.greyMaterialAssign = materialAssignSetup(greySphereLocation, nmcLocation, parent)
+            greyMaterialIntoAssign = connectTwoNodes(self.greyGeoNMCMerge, self.greyMaterialAssign, 'out', 'input')
     
     def createChromeBall(self, nmc, nmcLocation, parent):
         networkMaterialCreate = nmc
@@ -639,6 +651,7 @@ class LookDevSetup(QWidget):
 
         if self.enableGrey.isChecked() == True:
             chromeConnectInsideNMC = nmcConnect(chromeNetworkMaterial, chromeMaterial, 'dlSurface')
+            self.chromeMaterialAssign = materialAssignSetup(chromeSphereLocation, chromeMaterialLocation, parent)
         else:
             chromeConnectInsideNMC = nmcConnect(nmc, chromeMaterial, 'dlSurface')
 
@@ -713,6 +726,7 @@ class LookDevSetup(QWidget):
         nmc.setParent(primGroup)
 
         self.greyGeoNMCMerge.setParent(primGroup)
+        
         if self.enableGrey.isChecked() and self.enableChrome.isChecked():
             addMergePort = self.greyGeoNMCMerge.addInputPort('i2')
             chromeMergeOut = self.chromeAttributeSet.getOutputPort('out')
@@ -723,11 +737,17 @@ class LookDevSetup(QWidget):
 
         nmcOut.connect(primGroupReturn)
 
-        materialAssignStack = NodegraphAPI.CreateNode('GroupStack', lookdevGroup)
 
         self.greyMaterialAssign.setParent(materialAssignStack)
+        self.chromeMaterialAssign.setParent(materialAssignStack)
 
-        groupOut = connectTwoNodes(primGroup, materialAssignStack, 'groupOut', 'in')
+        #greyMatInAssignStack = connectTwoNodes(materialAssignStack, self.greyMaterialAssign, 'in', 'input')
+        greyMatToChromeMat = connectTwoNodes(self.greyMaterialAssign, self.chromeMaterialAssign, 'out', 'input')
+        chromeMatOut = self.chromeMaterialAssign.getOutputPort('out')
+
+        chromeMatOut.connect(self.assignStackReturn)
+
+        groupOut = connectTwoNodes(primGroup, self.materialAssignStack, 'out', 'in')
 
 
 
