@@ -190,7 +190,7 @@ class TurntableWindow(QWidget):
         dollyTargetPath.setValue(assetPath)
 
         dollyTargetBounds = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('targetBounds'))
-        dollyTargetBounds.setValue('sphere')
+        dollyTargetBounds.setValue('box')
 
         dollyOffsetAngle = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('angleOffset'))
         dollyOffsetAngle.setValue(offsetAmount)
@@ -210,6 +210,10 @@ class TurntableWindow(QWidget):
         assetLocation = alembicCreate.getParameterValue('name', NodegraphAPI.GetCurrentTime())
 
         camera = NodegraphAPI.CreateNode('CameraCreate', self.root)
+        camTranslate = UI4.FormMaster.CreateParameterPolicy(None, camera.getParameter('transform.translate'))
+        camTranslate.setValue([0,
+                               1.5,
+                               14])
         
         
         cameraFOV = UI4.FormMaster.CreateParameterPolicy(None, camera.getParameter('fov'))
@@ -665,13 +669,13 @@ class LookDevSetup(QWidget):
         setTransformPath = UI4.FormMaster.CreateParameterPolicy(None, lookdevTransform.getParameter('path'))
         setTransformPath.setValue('/root/world/LookDevScene')
         scaleLookdev = UI4.FormMaster.CreateParameterPolicy(None, lookdevTransform.getParameter('scale'))
-        scaleLookdev.setValue([0.08,
-                               0.08,
-                               0.08])
+        scaleLookdev.setValue([0.1,
+                               0.1,
+                               0.1])
 
         transformLookdev = UI4.FormMaster.CreateParameterPolicy(None, lookdevTransform.getParameter('translate'))
-        transformLookdev.setValue([-0.7,
-                                   -0.5,
+        transformLookdev.setValue([-1.2,
+                                   -0.6,
                                    -2.0])
 
         shadowsToTransform = connectTwoNodes(removeShadows, lookdevTransform, 'out', 'in')
