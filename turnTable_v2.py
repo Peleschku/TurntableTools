@@ -737,9 +737,9 @@ class LookDevSetup(QWidget):
 
         nmcOut.connect(primGroupReturn)
 
-
-        self.greyMaterialAssign.setParent(materialAssignStack)
-        self.chromeMaterialAssign.setParent(materialAssignStack)
+        self.materialAssignStack.setParent(lookdevGroup)
+        self.greyMaterialAssign.setParent(self.materialAssignStack)
+        self.chromeMaterialAssign.setParent(self.materialAssignStack)
 
         #greyMatInAssignStack = connectTwoNodes(materialAssignStack, self.greyMaterialAssign, 'in', 'input')
         greyMatToChromeMat = connectTwoNodes(self.greyMaterialAssign, self.chromeMaterialAssign, 'out', 'input')
@@ -747,7 +747,7 @@ class LookDevSetup(QWidget):
 
         chromeMatOut.connect(self.assignStackReturn)
 
-        groupOut = connectTwoNodes(primGroup, self.materialAssignStack, 'out', 'in')
+        groupOut = connectTwoNodes(primGroup, self.materialAssignStack, 'groupOut', 'in')
 
 
 
