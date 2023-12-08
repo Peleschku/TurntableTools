@@ -241,17 +241,39 @@ class TurntableWindow(QWidget):
 
         shaderConnect = nmcConnect(assetNMC, assetShader, 'dlSurface')
 
-        if self.lookDevSetup.enableAll.isChecked():
+        if self.lookDevSetup.enableBackdrop.isChecked() and self.lookDevSetup.enableAll.isChecked():
+            createBackdrop = self.lookDevSetup.addBackdrop(self.root)
+            createLookdevSetup = self.lookDevSetup.createLookdevScene(self.root)
+            backdropGroupOut = createBackdrop.getOutputPort('groupOut')
+            lookdevGroupOut = createLookdevSetup.getOutputPort('groupOut')
+            groupsMerge = NodegraphAPI.CreateNode('Merge', self.root)
+            mergeInOne = groupsMerge.addInputPort('i0')
+            mergeInTwo = groupsMerge.addInputPort('i1')
+            backdropGroupOut.connect(mergeInOne)             
+            lookdevGroupOut.connect(mergeInTwo)
+            
+            groupsMergeOut = groupsMerge.getOutputPort('out')
+            camAssetMerge = multiMerge([alembicCreate, camera, assetNMC], self.root)
+            newPort = camAssetMerge.addInputPort('i3')
+            groupsMergeOut.connect(newPort)
+        
+        if self.lookDevSetup.enableAll.isChecked() == True and self.lookDevSetup.enableBackdrop.isChecked() != True:
             createLookdevSetup = self.lookDevSetup.createLookdevScene(self.root)
             lookdevGroupOut = createLookdevSetup.getOutputPort('groupOut')
             camAssetMerge = multiMerge([alembicCreate, camera, assetNMC], self.root)
             newPort = camAssetMerge.addInputPort('i3')
             lookdevGroupOut.connect(newPort)
-        elif self.lookDevSetup.enableAll.isChecked() != True:
-            camAssetMerge = multiMerge([alembicCreate, camera, assetNMC], self.root)
 
-        if self.lookDevSetup.enableBackdrop.isChecked():
+        if self.lookDevSetup.enableBackdrop.isChecked() == True and self.lookDevSetup.enableAll.isChecked() != True:
             createBackdrop = self.lookDevSetup.addBackdrop(self.root)
+            backdropGroupOut = createBackdrop.getOutputPort('groupOut')
+            camAssetMerge = multiMerge([alembicCreate, camera, assetNMC], self.root)
+            newPort = camAssetMerge.addInputPort('i3')
+            backdropGroupOut.connect(newPort)
+        
+        elif self.lookDevSetup.enableBackdrop.isChecked() != True and self.lookDevSetup.enableAll.isChecked() != True:
+            camAssetMerge = multiMerge([alembicCreate, camera, assetNMC], self.root)
+       
 
         # creating the material assign and then connecting it
 
