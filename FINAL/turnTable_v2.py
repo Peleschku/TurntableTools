@@ -351,6 +351,7 @@ class SkydomeSetup(QWidget):
 
         # path to texture
 
+        lightingLabel = QLabel("Skydome Setup")
         texturePathLabel = QLabel("Path to Texture")
         self.texturePath = QLineEdit()
         self.searchTexture = QPushButton("Search")
@@ -393,29 +394,31 @@ class SkydomeSetup(QWidget):
         self.exposureSlider.valueChanged.connect(self.exposureChanged)
 
         # Assign a texture to the Light
-        self.parentLayout.addWidget(texturePathLabel, 0, 0)
-        self.parentLayout.addWidget(self.texturePath, 0, 1, 1, 6)
-        self.parentLayout.addWidget(self.searchTexture, 0, 7, 1, 1)
+        self.parentLayout.addWidget(lightingLabel, 0, 0)
+        
+        self.parentLayout.addWidget(texturePathLabel, 1, 0)
+        self.parentLayout.addWidget(self.texturePath, 1, 1, 1, 6)
+        self.parentLayout.addWidget(self.searchTexture, 1, 7, 1, 1, Qt.AlignLeft)
         
         # Set Light's colorspace
-        self.parentLayout.addWidget(colorSpace, 3, 0)
-        self.parentLayout.addWidget(self.selectColorspace, 3, 1, 1, 7)
-        self.parentLayout.addWidget(mapping, 4, 0)
+        self.parentLayout.addWidget(colorSpace, 4, 0)
+        self.parentLayout.addWidget(self.selectColorspace, 4, 1, 1, 7)
+        self.parentLayout.addWidget(mapping, 5, 0)
         
         # Set the texture image's mapping type
-        self.parentLayout.addWidget(self.mappingDrowdown, 4, 1, 1, 7)
-        self.parentLayout.addWidget(self.useTexture, 5, 7, 1, 1, Qt.AlignLeft)
+        self.parentLayout.addWidget(self.mappingDrowdown, 5, 1, 1, 7)
+        self.parentLayout.addWidget(self.useTexture, 6, 7, 1, 1, Qt.AlignLeft)
 
         # Light intensity Settings
-        self.parentLayout.addWidget(intensityLabel, 6, 0)
-        self.parentLayout.addWidget(self.intensityValue, 6, 1, 1, 1, Qt.AlignLeft)
-        self.parentLayout.addWidget(self.intensitySlider, 6, 2, 1, 6)
+        self.parentLayout.addWidget(intensityLabel, 7, 0)
+        self.parentLayout.addWidget(self.intensityValue, 7, 1, 1, 1, Qt.AlignLeft)
+        self.parentLayout.addWidget(self.intensitySlider, 7, 2, 1, 6)
         
 
         # Light Exposure Settings
-        self.parentLayout.addWidget(exposureLabel, 7, 0, 1, 1)
-        self.parentLayout.addWidget(self.exposureValue, 7, 1, 1, 1, Qt.AlignLeft)
-        self.parentLayout.addWidget(self.exposureSlider, 7, 2, 1, 6)
+        self.parentLayout.addWidget(exposureLabel, 8, 0, 1, 1)
+        self.parentLayout.addWidget(self.exposureValue, 8, 1, 1, 1, Qt.AlignLeft)
+        self.parentLayout.addWidget(self.exposureSlider, 8, 2, 1, 6)
 
         self.show()
         self.setLayout(self.parentLayout)
@@ -541,8 +544,8 @@ class LookDevSetup(QWidget):
 
         layout.addWidget(lookdevHeading, 0, 0)
         layout.addWidget(backgrounds, 1, 0)
-        layout.addWidget(self.enablePlatform, 2, 0)
-        layout.addWidget(self.enableBackdrop, 2, 1)
+        #layout.addWidget(self.enablePlatform, 2, 0)
+        layout.addWidget(self.enableBackdrop, 2, 0)
         layout.addWidget(lookdevTools, 3, 0)
         layout.addWidget(self.enableAll, 4, 0)
 
