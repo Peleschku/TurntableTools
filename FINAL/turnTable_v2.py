@@ -649,9 +649,9 @@ class LookDevSetup(QWidget):
                                   0,
                                   0])
         transformScale = UI4.FormMaster.CreateParameterPolicy(None, self.chartTransform.getParameter('scale'))
-        transformScale.setValue([5,
-                                 0,
-                                 3])
+        transformScale.setValue([5.0,
+                                 3.0,
+                                 3.0])
         transformInteractive = UI4.FormMaster.CreateParameterPolicy(None, self.chart.getParameter('makeInteractive'))
         transformInteractive.setValue('No')
         geoIntoTransform = connectTwoNodes(self.chart, self.chartTransform, 'out', 'in')
