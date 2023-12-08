@@ -3,6 +3,7 @@ import sys
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
+import os
 
 def geoCreate(primitiveType, parent):
     primitiveCreate = NodegraphAPI.CreateNode('PrimitiveCreate', parent)
@@ -103,8 +104,6 @@ def subDivideMesh( meshLocation, parent):
     subdivideMesh.setValue('subdmesh')
 
     return attributeSet
-
-
 
 
 
@@ -257,14 +256,14 @@ class TurntableWindow(QWidget):
             newPort = camAssetMerge.addInputPort('i3')
             groupsMergeOut.connect(newPort)
         
-        if self.lookDevSetup.enableAll.isChecked() == True and self.lookDevSetup.enableBackdrop.isChecked() != True:
+        elif self.lookDevSetup.enableAll.isChecked() and not self.lookDevSetup.enableBackdrop.isChecked():
             createLookdevSetup = self.lookDevSetup.createLookdevScene(self.root)
             lookdevGroupOut = createLookdevSetup.getOutputPort('groupOut')
             camAssetMerge = multiMerge([alembicCreate, camera, assetNMC], self.root)
             newPort = camAssetMerge.addInputPort('i3')
             lookdevGroupOut.connect(newPort)
 
-        if self.lookDevSetup.enableBackdrop.isChecked() == True and self.lookDevSetup.enableAll.isChecked() != True:
+        elif self.lookDevSetup.enableBackdrop.isChecked() and not self.lookDevSetup.enableAll.isChecked():
             createBackdrop = self.lookDevSetup.addBackdrop(self.root)
             backdropGroupOut = createBackdrop.getOutputPort('groupOut')
             camAssetMerge = multiMerge([alembicCreate, camera, assetNMC], self.root)
