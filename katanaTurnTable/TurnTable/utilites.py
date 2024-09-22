@@ -1,3 +1,12 @@
+from PyQt5.QtWidgets import (QWidget,
+                            QGridLayout,
+                            QLabel,
+                            QFileDialog,
+                            QLineEdit,
+                            QPushButton)
+
+
+
 def geoCreate(primitiveType, parent):
     primitiveCreate = NodegraphAPI.CreateNode('PrimitiveCreate', parent)
     changePrimType = UI4.FormMaster.CreateParameterPolicy(None, primitiveCreate.getParameter('type'))
@@ -97,3 +106,56 @@ def subDivideMesh( meshLocation, parent):
     subdivideMesh.setValue('subdmesh')
 
     return attributeSet
+
+    
+def dollyConstraintCreate(self, cameraPath, assetPath, offsetAmount):
+    dollyConstraint = NodegraphAPI.CreateNode('DollyConstraint', self.root)
+
+    dollyBasePath = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('basePath'))
+    dollyBasePath.setValue(cameraPath)
+    
+    dollyTargetPath = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('targetPath.i0'))
+    dollyTargetPath.setValue(assetPath)
+
+    dollyTargetBounds = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('targetBounds'))
+    dollyTargetBounds.setValue('box')
+
+    dollyOffsetAngle = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('angleOffset'))
+    dollyOffsetAngle.setValue(offsetAmount)
+
+    dollyConstraintList = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('addToConstraintList'))
+    dollyConstraintList.setValue(1.0)
+
+    return dollyConstraint
+
+class SearchBrowser(QWidget):
+    def __init__(self):
+        super().__init__()
+        self._parentLayout = QGridLayout()
+        self._parentLayout.setVerticalSpacing(15)
+
+        self._createModule()
+    
+    def _createModule(self):
+        path = QLabel("Path")
+        self._assetPath = QLineEdit()
+
+        self._search = QPushButton("Search")
+        self._search.clicked.connect(self._browser)
+
+        self._parentLayout.addWidget(path, 0, 0, 1, 1)
+        self._parentLayout.addWidget(self._assetPath, 0, 1, 1, 6)
+        self._parentLayout.addWidget(self._search, 0, 7, 1, 1)
+
+        self.show()
+        self.setLayout(self._parentLayout)
+    
+    def _browser(self):
+        filter = ["alembic (*.abc)",
+                  "usda (*usda)",
+                  "usd (*.usd)"]
+        
+        file = QFileDialog.getOpenFileName(self, "Open", "", filter)
+
+        if file:
+            self._assetPath.insert(file[0])

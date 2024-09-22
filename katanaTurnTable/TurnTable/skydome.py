@@ -1,6 +1,5 @@
 from Katana import NodegraphAPI
 
-from . import utilites as Utils
 
 from PyQt5.QtWidgets import (QWidget,
                             QGridLayout,
