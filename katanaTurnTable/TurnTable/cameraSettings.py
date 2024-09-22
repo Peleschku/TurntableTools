@@ -1,4 +1,5 @@
-#from Katana import UI4
+from Katana import (NodeGraphAPI,
+                    UI4)
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QWidget,
                             QGridLayout,
@@ -14,6 +15,7 @@ class CameraSettings(QWidget):
         super().__init__()
         self._parentLayout = QGridLayout()
         self.createModule()
+        self.root = NodeGraphAPI.GetRootNode()
 
     def createModule(self):
 
@@ -66,3 +68,53 @@ class CameraSettings(QWidget):
 
         self.show()
         self.setLayout(self._parentLayout)
+    
+    def _cameraCreate(self):
+        
+        #creating the CameraCreate node and setting a default transform value
+        cameraCreate = NodeGraphAPI.CreateNode("CameraCreate", self.root)
+        camtranslate = UI4.FormMaster.CreateParameterPolicy(None, cameraCreate.getParameter(
+            "transform.translate"
+        )).setValue([0, 1.5, 14])
+
+        # camera FOV settings based on user input
+        cameraFOV = UI4.FormMaster.CreateParameterPolicy(None, cameraCreate.getParameter(
+            "fov"
+        ))
+        if self._FOVValue.text() !=70:
+            cameraFOV.setValue(self._FOVValue.text())
+        
+        # make camera interactive based on user input
+        makeInteractive = UI4.FormMaster.CreateParameterPolicy(None, cameraCreate.getParameter(
+            "makeInteractive"
+        ))
+        if self._makeInteractive.setCheckable(False):
+            makeInteractive.setValue("No")
+        else:
+            makeInteractive.setValue("Yes")
+
+
+        return cameraCreate
+
+    def dollyConstraintCreate(self, cameraPath, assetPath, offsetAmount):
+        dollyConstraint = NodegraphAPI.CreateNode('DollyConstraint', self.root)
+
+        dollyBasePath = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('basePath'))
+        dollyBasePath.setValue(cameraPath)
+
+        dollyTargetPath = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('targetPath.i0'))
+        dollyTargetPath.setValue(assetPath)
+
+        dollyTargetBounds = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('targetBounds'))
+        dollyTargetBounds.setValue('box')
+
+        dollyOffsetAngle = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('angleOffset'))
+        dollyOffsetAngle.setValue(offsetAmount)
+
+        dollyConstraintList = UI4.FormMaster.CreateParameterPolicy(None, dollyConstraint.getParameter('addToConstraintList'))
+        dollyConstraintList.setValue(1.0)
+
+        return dollyConstraint
+
+
+
