@@ -13,6 +13,7 @@ from . import utilites as Utils
 from . import cameraSettings as Cam
 from . import skydome as Lgt
 from . import lookDev as Ld
+from . import nodes as Nodes
 
 
 class TurnTableWindow(QWidget):
@@ -69,9 +70,54 @@ class TurnTableWindow(QWidget):
     def _createNodes(self):
         
         assetImport = self._importAsset()
+        assetNmc = Nodes._assetNMC(self.root)
+        
+        # camera nodes + settings
         cameraCreate = Cam.CameraSettings._cameraCreate()
-        # camera location for dolly constraint
         camLocation = cameraCreate.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+
+        '''
+        TODO: all the material subdiv nodes should eventually go in to a merge, with all the
+        material assigns eventually living under that merge node. 
+        Everything in the Lookdev group also eventually needs to live inside of a group, so
+        `lookdevParentNmc` as the root node for all the materials will need to be switched out,
+        and all the `self.root`s for the look dev geo/associated nodes will need to be swapped
+        with the eventual group.
+
+        '''
+        # Lookdev setup
+        lookdevParentNmc = NodegraphAPI.CreateNode("NetworkMaterialCreate")
+
+        # grey lookdev sphere setup
+        greySphere = Ld._shaderBall(self.root, "grey")
+        greyLocation = greySphere.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+        greySubdiv = Utils.subDivideMesh(greyLocation, self.root)
+        greyMaterial = Ld._shaderBallMaterial(lookdevParentNmc, "grey")
+        greyMatAssign = Utils.materialAssignSetup(greyLocation, greyMaterial, self.root)
+        Utils.connectTwoNodes(greySphere, greySubdiv, "out", "in")
+        Utils.connectTwoNodes(greySubdiv, "out", "in")
+
+
+        #chrome lookdev sphere setup
+        chromeSphere = Ld._shaderBall(self.root, "chrome")
+        chromeLocation = chromeSphere.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+        chromeSubdiv = Utils.subDivideMesh(chromeLocation, self.root)
+        chromeMaterial = Ld._shaderBallMaterial(lookdevParentNmc, "chrome")
+        chromeMatAssign = Utils.materialAssignSetup(chromeLocation, chromeMaterial, self.root)
+        Utils.connectTwoNodes(chromeSphere, chromeSubdiv, "out", "in")
+        Utils.connectTwoNodes(chromeSubdiv, chromeMatAssign, "out", "in")
+
+        # macbeth chart setup
+        macbethChart = Ld._macbethChartGeo(self.root)
+        chartLocation = macbethChart.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+        chartSubdiv = Utils.subDivideMesh(chartLocation)
+        chartMaterial = Ld._chartMaterial(lookdevParentNmc)
+        chartMatAssign = Utils.materialAssignSetup(chartLocation, chartMaterial, self.root)
+        Utils.connectTwoNodes(macbethChart, chartSubdiv, "out", "in")
+        Utils.connectTwoNodes(chartSubdiv, chartMatAssign, "out", "in")
+
+
+
         
 
 
