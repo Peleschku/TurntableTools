@@ -116,6 +116,15 @@ class TurnTableWindow(QWidget):
         Utils.connectTwoNodes(macbethChart, chartSubdiv, "out", "in")
         Utils.connectTwoNodes(chartSubdiv, chartMatAssign, "out", "in")
 
+        # backdrop setup
+        backdrop = Ld._backdropPrim(self.root)
+        backdropLocation = backdrop.getParameterValue("name", NodegraphAPI.GetCurrentTime())
+        backdropSubdiv = Utils.subDivideMesh(backdropLocation)
+        backdropMaterial = Ld._backdropMaterial(lookdevParentNmc)
+        backdropMatAssign = Utils.materialAssignSetup(backdropLocation, backdropMaterial, self.root)
+        Utils.connectTwoNodes(backdrop, backdropSubdiv, "out", "in")
+        Utils.connectTwoNodes(backdropSubdiv, backdropMatAssign, "in", "out")
+
 
 
         

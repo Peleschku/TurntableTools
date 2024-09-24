@@ -1,7 +1,8 @@
 from . import utilites as Utils
+from Katana import (NodegraphAPI,
+                    UI4)
 
-
-def _assetNMC(self, root):
+def _assetNMC(root):
     nmc = NodegraphAPI.CreateNode("NetworkMaterialCreate", root)
     materialLoc = Utils.getMaterialPath(nmc.getNetworkMaterials()[0])
 
@@ -16,3 +17,16 @@ def _assetNMC(self, root):
 
     return nmc
 
+# DlObjectSettings node used to remove shadows in render
+def _objectSettings(root, object, objectPath):
+    objectSettings = NodegraphAPI.CreateNode("DlObjectSettings", root)
+    objectLocation = object.getParameterValue("name", NodegraphAPI.GetCurrentTime())
+    cel = UI4.FormMaster.CreateParameterPolicy(None, objectSettings.getParameter(
+        'CEL'
+    )).setValue(objectLocation + str(objectPath))
+    removeShadows = UI4.FormMaster.CreateParameterPolicy(None, objectSettings.getParameter(
+        'args.dlObjectSettings.visibility.shadow'
+    )).setValue(0)
+
+    return objectSettings
+    

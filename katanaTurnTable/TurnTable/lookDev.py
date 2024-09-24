@@ -140,8 +140,7 @@ def _chartMaterial(root):
     textureNode = Utils.shadingNodeCreate("file", root)
     place2d = Utils.shadingNodeCreate("place2dTexture", root)
 
-    # TODO: figure out how to get file path for assets folder
-    texturePath = "help??"
+    texturePath = os.getcwd() + "assets\sRGB_ColorChecker.tdl"
     importTexture = UI4.FormMaster.CreateParameterPolicy(None, textureNode.getParameter(
         "parameters.fileTextureName"
     )).setValue(str(texturePath))
@@ -152,9 +151,44 @@ def _chartMaterial(root):
 
     return material
 
-'''
- TODO: Move over the functions for the backdrop then add them to turntable.py
-'''        
+      
+def _backdropPrim(root):
+    assetPath = os.getcwd() + "assets\ground.abc"
+    backdropImport = NodegraphAPI.CreateNode("Alembic_In", root)
+    name = UI4.FormMaster.CreateParameterPolicy(None, backdropImport.getParameter(
+        "name"
+    )).setValue("/root/world/backdrop", 0)
+
+    fileIn = UI4.CreateParameterPolicy(None, backdropImport.getParameter(
+        "absAsset"
+    )).setValue(str(assetPath))
+
+    return backdropImport
+
+
+def _backdropMaterial(root):
+    material = Utils.shadingNodeCreate("dlPrincipled", root)
+    roughness = UI4.CreateParameterPolicy(None, material.getParameter(
+        "parameters.roughness"
+    )).setValue(1)
+    specular = UI4.CreateParameterPolicy(None, material.getParameter(
+        "parameters.specular_level"
+    )).setValue(0)
+    
+    textureNode = Utils.shadingNodeCreate("file", root)
+    place2d = Utils.shadingNodeCreate("place2dTexture", root)
+
+    texturePath = os.getcwd() + "assets\Floor_Color_50percent.tdl"
+    importTexture = UI4.FormMaster.CreateParameterPolicy(None, textureNode.getParameter(
+        "parameters.fileTextureName"
+    )).setValue(str(texturePath))
+
+    internalConnection = Utils.nmcConnect(root, material, "dlsurface")
+    Utils.connectTwoNodes(place2d, textureNode, "outUV", "uvCoord")
+    Utils.connectTwoNodes(textureNode, material, "outColor", "color")
+
+    return material
+
     
 
 
