@@ -1,5 +1,6 @@
 import os
-from Katana import UI4
+from Katana import (NodegraphAPI,
+                    UI4)
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import (QWidget,
                             QGridLayout,
@@ -36,7 +37,6 @@ class LookDevSetup(QWidget):
 
         self.show()
         self.setLayout(self._parentLayout)
-
 
 def _shaderBall(root, sphereType):
     sphere = Utils.geoCreate("poly sphere", root)
@@ -150,7 +150,6 @@ def _chartMaterial(root):
     Utils.connectTwoNodes(textureNode, material, "outColor", "color")
 
     return material
-
       
 def _backdropPrim(root):
     assetPath = os.getcwd() + "assets\ground.abc"
@@ -164,7 +163,6 @@ def _backdropPrim(root):
     )).setValue(str(assetPath))
 
     return backdropImport
-
 
 def _backdropMaterial(root):
     material = Utils.shadingNodeCreate("dlPrincipled", root)
@@ -189,7 +187,54 @@ def _backdropMaterial(root):
 
     return material
 
-    
+def _lookDevGroup(root, group, nmc):
+    group = group
+
+    parentNmc = nmc
+
+    # grey sphere setup
+    greySphere = _shaderBall(group, "grey")
+    greyLocation = greySphere.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+    greySubdiv = Utils.subDivideMesh(greyLocation, group)
+    greyMaterial = _shaderBallMaterial(parentNmc, "grey")
+    Utils.nmcConnect(parentNmc, greySphere, "dlSurface")
+    Utils.connectTwoNodes(greySphere, greySubdiv, "out", "in")
+
+    # chrome sphere setup
+    chromeSphere = _shaderBall(group, "chrome")
+    chromeLocation = chromeSphere.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+    chromeSubdiv = Utils.subDivideMesh(chromeLocation, group)
+    chromeMaterial = _shaderBallMaterial(parentNmc, "chrome")
+    Utils.nmcConnect(parentNmc, chromeMaterial, "dlSurface")
+    Utils.connectTwoNodes(chromeSphere, chromeSubdiv, "out", "in")
+
+    # macbeth chart setup
+    chart = _macbethChartGeo(group)
+    chartLocation = chart.getParameterValue('name', NodegraphAPI.GetCurrentTime())
+    chartSubdiv = Utils.subDivideMesh(chartLocation)
+    chartMaterial = _chartMaterial(parentNmc)
+    Utils.nmcConnect(parentNmc, chartMaterial, "dlSurface")
+    Utils.connectTwoNodes(chart, chartSubdiv, "out", "in")
+
+    # merging everything together
+    primMerge = Utils.multiMerge([greySphere,
+                                  chromeSphere,
+                                  chart], group)
+    nmcMerge = Utils.multiMerge([primMerge, parentNmc], group)
+
+    #creating material assigns
+    greyMatAssign = Utils.materialAssignSetup(greyLocation, greyMaterial, group)
+    chromeMatAssign = Utils.materialAssignSetup(chromeLocation, chromeMaterial, group)
+    chartMatAssign = Utils.materialAssignSetup(chartLocation, chartMaterial, group)
+
+    #connecting everything
+    Utils.connectTwoNodes(nmcMerge, greyMatAssign, "out", "in")
+    Utils.connectTwoNodes(greyMatAssign, chromeMatAssign, "out", "in")
+    Utils.connectTwoNodes(chromeMatAssign, chartMatAssign, "out", "in")
+
+    return group
+
+
 
 
 

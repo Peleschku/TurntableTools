@@ -85,9 +85,18 @@ class TurnTableWindow(QWidget):
         with the eventual group.
 
         '''
+        
         # Lookdev setup
-        lookdevParentNmc = NodegraphAPI.CreateNode("NetworkMaterialCreate")
 
+        if self._lookDevSetup._enableBackdrop.isChecked() and self._lookDevSetup._enableBackdrop.isChecked():
+            lookdevGroup = Utils.groupNodeSetup(self.root)
+            lookdevParentNmc = NodegraphAPI.CreateNode("NetworkMaterialCreate", lookdevGroup)
+            lookdevSetup = Ld._lookDevGroup(lookdevGroup, lookdevParentNmc)
+            # add backdrop, finish off if statement
+
+        
+        
+        '''
         # grey lookdev sphere setup
         greySphere = Ld._shaderBall(self.root, "grey")
         greyLocation = greySphere.getParameterValue('name', NodegraphAPI.GetCurrentTime())
@@ -95,7 +104,7 @@ class TurnTableWindow(QWidget):
         greyMaterial = Ld._shaderBallMaterial(lookdevParentNmc, "grey")
         greyMatAssign = Utils.materialAssignSetup(greyLocation, greyMaterial, self.root)
         Utils.connectTwoNodes(greySphere, greySubdiv, "out", "in")
-        Utils.connectTwoNodes(greySubdiv, "out", "in")
+        Utils.connectTwoNodes(greySubdiv, greyMatAssign"out", "in")
 
 
         #chrome lookdev sphere setup
@@ -124,7 +133,7 @@ class TurnTableWindow(QWidget):
         backdropMatAssign = Utils.materialAssignSetup(backdropLocation, backdropMaterial, self.root)
         Utils.connectTwoNodes(backdrop, backdropSubdiv, "out", "in")
         Utils.connectTwoNodes(backdropSubdiv, backdropMatAssign, "in", "out")
-
+    '''
 
 
         
